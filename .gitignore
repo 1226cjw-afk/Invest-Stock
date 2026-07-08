@@ -1,0 +1,13 @@
+# 비밀키·로컬 설정 — 절대 커밋 금지
+.mcp.json
+.env
+.env.*
+
+# OS 잡파일
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# 향후 빌드 도구 도입 대비
+node_modules/
+dist/

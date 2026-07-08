@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INVST://STOCK — 투자 참조 터미널</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/terminal.css">
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo"><span class="a">INVST</span><span class="dim">://</span>STOCK</div>
+    <div class="logo-sub">INVESTMENT REFERENCE TERMINAL</div>
+  </div>
+  <div class="sessions">
+    <span class="badge" id="badge-krx"><span class="dot"></span><b>KRX</b> —</span>
+    <span class="badge" id="badge-nyse"><span class="dot"></span><b>NYSE</b> —</span>
+  </div>
+  <div class="clock" id="clock">—</div>
+</header>
+
+<div id="tape"></div>
+
+<!-- 탭 버튼과 페이지 섹션은 js/pages/* 의 registerPage()로부터 자동 생성됩니다 -->
+<nav id="nav"></nav>
+<main id="main"></main>
+
+<footer>
+  데이터: <a href="https://www.tradingview.com/" target="_blank">TradingView</a> 무료 위젯 (지연 시세 포함 가능) · AI 분석: Anthropic Claude API + 웹 검색<br>
+  <b>⚠ 본 페이지의 모든 정보(기술적 시그널·AI 분석 포함)는 투자 참고 자료일 뿐 매수·매도 권유가 아니며, 투자의 최종 판단과 책임은 본인에게 있습니다.</b>
+</footer>
+
+<!-- 로드 순서: 설정 → 데이터 → 코어 → AI 클라이언트 → 페이지 모듈 → 부팅 -->
+<script src="js/config.js"></script>
+<script src="js/reports-data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/ai-client.js"></script>
+<script src="js/pages/dashboard.js"></script>
+<script src="js/pages/sectors.js"></script>
+<script src="js/pages/hot.js"></script>
+<script src="js/pages/charts.js"></script>
+<script src="js/pages/analysis.js"></script>
+<script src="js/pages/reports.js"></script>
+<script src="js/pages/signals.js"></script>
+<script>App.boot();</script>
+</body>
+</html>
