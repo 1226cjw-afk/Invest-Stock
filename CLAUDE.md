@@ -2,6 +2,13 @@
 
 로컬 주식투자 참조 페이지. `index.html` 더블클릭으로 실행(file:// 기준이므로 **ES module 금지**, 전역 네임스페이스 `App`/`AppConfig`/`AiClient` 유지). 구조·확장 가이드는 `README.md` 참조.
 
+## 구조 요약
+
+- `js/config.js` — 심볼·목록·필터·프리셋 전부 여기 (로직 없음). 종목/탭 데이터 수정은 이 파일만.
+- `js/core.js` — 페이지 레지스트리, `App.tv(id,위젯,설정)` 위젯 팩토리, `App.openSymbolModal(sym,name)` 공용 상세 팝업, `App.store`.
+- `js/pages/*.js` — 화면 모듈. **새 탭 = 파일 1개(`App.registerPage({id,label,order,html,init})`) + index.html에 script 태그 1줄.**
+- `js/ai-client.js` — Claude API 호출 격리 (웹 배포 시 endpoint만 프록시로 교체).
+
 ## ★ 시장 분석 요청 시 필수 워크플로
 
 사용자는 API 키가 없어서 페이지의 AI 분석 버튼 대신 **Claude Code 세션에서 직접 분석을 요청**한다.
