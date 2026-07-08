@@ -12,9 +12,10 @@ Claude API(웹 검색 기반 급등락 원인 분석)를 조합했다.
 - **위젯/AI 호출이 안 뜰 때** (브라우저의 file:// 제한 등): 로컬 서버로 실행.
   ```
   cd C:\Users\1226c\Projects\Invest_Stock
-  python -m http.server 8800
+  node serve.js
   ```
-  → 브라우저에서 `http://localhost:8800`
+  → 브라우저에서 `http://localhost:8804`
+  (이 PC에는 Python이 설치되어 있지 않아 Node 기반 `serve.js`를 동봉함)
 
 숫자키 `1`~`7`로 탭 전환.
 
@@ -23,8 +24,8 @@ Claude API(웹 검색 기반 급등락 원인 분석)를 조합했다.
 | # | 탭 | 내용 |
 |---|---|---|
 | 1 | 대시보드 | 글로벌 지수/환율/원자재 오버뷰 · 경제 캘린더 · 시장 뉴스 |
-| 2 | 미국 섹터맵 | S&P 500 섹터 히트맵 (자체 버튼으로 나스닥100·다우 등 전환) |
-| 3 | 국내 섹터맵 | KOSPI 섹터 히트맵 (코스피200·코스닥 등 전환) |
+| 2 | 미국 섹터맵 | S&P 500 섹터 히트맵 — TradingView 위젯 (나스닥100·다우 등 전환) |
+| 3 | 국내 섹터맵 | 코스피/코스닥 섹터 트리맵 — **자체 구현** (스캐너 API + squarified treemap, 타일 클릭 = 상세 팝업, 빨강=상승/파랑=하락) |
 | 4 | 핫 종목 | 급등/급락/거래량/시총 자체 테이블 — **종목 클릭 시 페이지 안 팝업**(차트+시그널)으로 상세 확인 |
 | 5 | 지수 차트 | 주요 지수·금리·환율·원자재 고급 차트 |
 | 6 | 급등락 AI 분석 | Claude + 웹 검색으로 급등락 원인 리포트 생성 (API 키 필요) |
@@ -126,10 +127,12 @@ Invest_Stock/
 ## 알아두면 좋은 것
 
 - TradingView 무료 위젯 시세는 거래소에 따라 **지연 시세**일 수 있다.
-- 히트맵은 위젯 내장 데이터셋 선택기를 쓰면 두 iframe이 설정을 공유해 미국/한국 탭이 서로
-  덮어쓰는 문제가 있어, 내장 선택기를 끄고(`isDataSetEnabled:false`) 자체 버튼으로 전환한다.
-  유효한 dataSource: 미국 `SPX500·NASDAQ100·NASDAQCOMPOSITE·DJDJI·AllUSA`,
-  한국 `KOSPI·KOSPI200·KOSDAQ·KOSDAQ150·AllKR` (`config.js`의 `HEATMAP_SETS`).
+- **TradingView embed 히트맵 위젯은 한국 데이터셋을 지원하지 않는다** (`dataSource:"KOSPI"` 등을
+  넣어도 조용히 SPX500으로 폴백 — 2026-07-08 headless 렌더 대조 실험으로 확인. NASDAQ100은
+  정상 적용되므로 설정 전달 문제가 아니라 임베드 앱의 값 거부). 그래서 국내 섹터맵은
+  스캐너 API + 자체 squarified treemap으로 구현했다 (`js/pages/sectors.js`,
+  설정은 `config.js`의 `KR_HEATMAP` — 지수 목록·표시 종목 수·색 스케일·섹터 한글 매핑).
+  미국용 위젯 dataSource: `SPX500·NASDAQ100·NASDAQCOMPOSITE·DJDJI·AllUSA` (`HEATMAP_SETS.us`).
 - 핫 종목 탭은 TradingView 공개 스캐너 API(`scanner.tradingview.com/{market}/scan`)를 직접
   호출해 자체 테이블로 그린다(CORS 전면 허용이라 file://에서도 동작, `options.lang:"ko"`로
   한글 종목명). 필터·정렬 프리셋은 `config.js`의 `SCANNER`에서 수정.

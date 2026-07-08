@@ -58,6 +58,67 @@ window.App = (function () {
   /* ── 페이지 레지스트리 ───────────────────────────── */
   function registerPage(page) { pages.push(page); }
 
+  /* ── 종목 상세 팝업 (공용: 핫 종목·섹터맵 등에서 사용) ── */
+  function ensureSymbolModal() {
+    if (document.getElementById('sym-modal')) return;
+    const m = document.createElement('div');
+    m.className = 'modal-overlay';
+    m.id = 'sym-modal';
+    m.hidden = true;
+    m.innerHTML = `
+      <div class="modal-panel">
+        <div class="modal-hd">
+          <b id="sm-title">—</b>
+          <button class="btn-sm btn-ghost" id="sm-watch">+ 관심목록</button>
+          <button class="btn-sm btn-ghost" id="sm-close">닫기 ESC</button>
+        </div>
+        <div class="modal-grid">
+          <div class="mg-left panel"><div class="panel-bd" id="sm-chart"></div></div>
+          <div class="mg-right">
+            <div class="panel" style="height:170px"><div class="panel-bd" id="sm-info"></div></div>
+            <div class="panel" style="flex:1;min-height:0"><div class="panel-bd" id="sm-ta"></div></div>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(m);
+    const close = () => { m.hidden = true; };
+    document.getElementById('sm-close').onclick = close;
+    m.addEventListener('click', e => { if (e.target === m) close(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  }
+
+  function openSymbolModal(sym, name) {
+    ensureSymbolModal();
+    const m = document.getElementById('sym-modal');
+    m.hidden = false;
+    document.getElementById('sm-title').textContent = `${name} · ${sym}`;
+
+    const watchBtn = document.getElementById('sm-watch');
+    const key = C.STORAGE.watchlist;
+    const inList = () => store.get(key, C.DEFAULT_WATCHLIST.slice()).includes(sym);
+    const syncBtn = () => { watchBtn.textContent = inList() ? '✓ 관심목록에 있음' : '+ 관심목록'; };
+    syncBtn();
+    watchBtn.onclick = () => {
+      const w = store.get(key, C.DEFAULT_WATCHLIST.slice());
+      if (!w.includes(sym)) { w.push(sym); store.set(key, w); }
+      syncBtn();
+    };
+
+    tv('sm-info', 'symbol-info', { ...DARK, symbol: sym, width: '100%' });
+    tv('sm-chart', 'advanced-chart', {
+      autosize: true, symbol: sym, interval: 'D', timezone: 'Asia/Seoul',
+      theme: 'dark', style: '1', locale: 'kr', backgroundColor: '#0d1117',
+      gridColor: 'rgba(42,52,65,0.5)', withdateranges: true,
+      hide_side_toolbar: true, allow_symbol_change: false, calendar: false,
+      support_host: 'https://www.tradingview.com',
+    });
+    tv('sm-ta', 'technical-analysis', {
+      colorTheme: 'dark', locale: 'kr', isTransparent: true,
+      interval: '1D', width: '100%', height: '100%', symbol: sym,
+      showIntervalTabs: true, displayMode: 'single',
+    });
+  }
+
   function show(id) {
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + id));
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.page === id));
@@ -140,8 +201,10 @@ window.App = (function () {
       symbols: C.TAPE_SYMBOLS,
     });
 
-    if (pages.length) show(pages[0].id);
+    /* URL 해시로 시작 탭 지정 가능 (예: index.html#kr) */
+    const initial = location.hash.slice(1);
+    if (pages.length) show(pages.some(p => p.id === initial) ? initial : pages[0].id);
   }
 
-  return { registerPage, show, boot, tv, DARK, esc, mdLite, store };
+  return { registerPage, show, boot, tv, DARK, esc, mdLite, store, openSymbolModal };
 })();

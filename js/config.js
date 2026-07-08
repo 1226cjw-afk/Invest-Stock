@@ -55,8 +55,9 @@ window.AppConfig = {
   /* 경제 캘린더 국가 필터 */
   CALENDAR_COUNTRIES: 'us,kr,cn,jp,eu',
 
-  /* 섹터 히트맵 데이터셋 (TradingView dataSource) — 첫 항목이 기본값
-     위젯 내장 선택기는 iframe 간 설정을 공유해 서로 덮어쓰므로 끄고, 자체 버튼으로 전환 */
+  /* 미국 섹터 히트맵 데이터셋 (TradingView embed dataSource) — 첫 항목이 기본값.
+     ⚠ 임베드 위젯은 한국 데이터셋(KOSPI 등)을 지원하지 않고 SPX500으로 폴백함
+       (2026-07-08 headless 렌더 테스트로 확인) → 국내는 아래 KR_HEATMAP 자체 구현 사용 */
   HEATMAP_SETS: {
     us: [
       ['SPX500', 'S&P 500'],
@@ -65,13 +66,41 @@ window.AppConfig = {
       ['DJDJI', '다우존스'],
       ['AllUSA', '미국 전체'],
     ],
-    kr: [
-      ['KOSPI', '코스피'],
-      ['KOSPI200', '코스피 200'],
-      ['KOSDAQ', '코스닥'],
-      ['KOSDAQ150', '코스닥 150'],
-      ['AllKR', '한국 전체'],
+  },
+
+  /* 국내 섹터 트리맵 (스캐너 API 자체 구현) */
+  KR_HEATMAP: {
+    indexes: [
+      ['KRX:KOSPI', '코스피'],
+      ['KRX:KOSPI200', '코스피 200'],
+      ['KRX:KOSDAQ', '코스닥'],
+      ['KRX:KOSDAQ150', '코스닥 150'],
     ],
+    maxStocks: 160,       // 시총 상위 N종목만 표시 (가독성)
+    colorMax: 3,          // 색 강도가 최대가 되는 등락률(%)
+    /* TradingView 섹터 분류 → 한글 */
+    sectorKo: {
+      'Electronic Technology': '전자 기술',
+      'Technology Services': '기술 서비스',
+      'Finance': '금융',
+      'Health Technology': '의료 기술',
+      'Health Services': '의료 서비스',
+      'Consumer Durables': '소비자 내구재',
+      'Consumer Non-Durables': '소비자 비내구재',
+      'Consumer Services': '소비자 서비스',
+      'Producer Manufacturing': '생산자 제조',
+      'Process Industries': '공정 산업',
+      'Industrial Services': '산업 서비스',
+      'Commercial Services': '상업 서비스',
+      'Distribution Services': '유통 서비스',
+      'Retail Trade': '소매업',
+      'Transportation': '운송',
+      'Utilities': '유틸리티',
+      'Energy Minerals': '에너지',
+      'Non-Energy Minerals': '비에너지 광물',
+      'Communications': '통신',
+      'Miscellaneous': '기타',
+    },
   },
 
   /* 핫 종목 스캐너 (TradingView scanner API — 페이지 내 자체 테이블) */

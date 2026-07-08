@@ -11,3 +11,4 @@ desktop.ini
 # 향후 빌드 도구 도입 대비
 node_modules/
 dist/
+test/

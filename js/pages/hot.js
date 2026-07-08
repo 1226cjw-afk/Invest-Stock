@@ -80,72 +80,12 @@
       box.innerHTML = html;
       stamp.textContent = '갱신 ' + new Date().toLocaleTimeString('ko-KR') + ' · 종목 클릭 = 상세 보기';
       box.querySelectorAll('.hot-row').forEach(tr =>
-        tr.onclick = () => openDetail(tr.dataset.sym, tr.dataset.name));
+        tr.onclick = () => App.openSymbolModal(tr.dataset.sym, tr.dataset.name));
     } catch (e) {
       box.innerHTML = `<div class="err"><b>목록을 불러오지 못했습니다:</b> ${App.esc(e.message)}<br>
         네트워크 문제일 수 있습니다. 잠시 후 <b>새로고침</b>을 눌러 다시 시도하세요.</div>`;
       stamp.textContent = '오류';
     }
-  }
-
-  /* ── 페이지 내 상세 팝업 (외부 이동 없음) ─────────── */
-  function ensureModal() {
-    if (document.getElementById('hot-modal')) return;
-    const m = document.createElement('div');
-    m.className = 'modal-overlay';
-    m.id = 'hot-modal';
-    m.hidden = true;
-    m.innerHTML = `
-      <div class="modal-panel">
-        <div class="modal-hd">
-          <b id="hm-title">—</b>
-          <button class="btn-sm btn-ghost" id="hm-watch">+ 관심목록</button>
-          <button class="btn-sm btn-ghost" id="hm-close">닫기 ESC</button>
-        </div>
-        <div class="modal-grid">
-          <div class="mg-left panel"><div class="panel-bd" id="hm-chart"></div></div>
-          <div class="mg-right">
-            <div class="panel" style="height:170px"><div class="panel-bd" id="hm-info"></div></div>
-            <div class="panel" style="flex:1;min-height:0"><div class="panel-bd" id="hm-ta"></div></div>
-          </div>
-        </div>
-      </div>`;
-    document.body.appendChild(m);
-    const close = () => { m.hidden = true; };
-    document.getElementById('hm-close').onclick = close;
-    m.addEventListener('click', e => { if (e.target === m) close(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
-  }
-
-  function openDetail(sym, name) {
-    ensureModal();
-    const m = document.getElementById('hot-modal');
-    m.hidden = false;
-    document.getElementById('hm-title').textContent = `${name} · ${sym}`;
-
-    const watchBtn = document.getElementById('hm-watch');
-    const inList = () => App.store.get(C.STORAGE.watchlist, C.DEFAULT_WATCHLIST.slice()).includes(sym);
-    const syncBtn = () => { watchBtn.textContent = inList() ? '✓ 관심목록에 있음' : '+ 관심목록'; };
-    syncBtn();
-    watchBtn.onclick = () => {
-      const w = App.store.get(C.STORAGE.watchlist, C.DEFAULT_WATCHLIST.slice());
-      if (!w.includes(sym)) { w.push(sym); App.store.set(C.STORAGE.watchlist, w); }
-      syncBtn();
-    };
-
-    App.tv('hm-info', 'symbol-info', { ...App.DARK, symbol: sym, width: '100%' });
-    App.tv('hm-chart', 'advanced-chart', {
-      autosize: true, symbol: sym, interval: 'D', timezone: 'Asia/Seoul',
-      theme: 'dark', style: '1', locale: 'kr', backgroundColor: '#0d1117',
-      gridColor: 'rgba(42,52,65,0.5)', withdateranges: true,
-      hide_side_toolbar: true, allow_symbol_change: false, calendar: false,
-      support_host: 'https://www.tradingview.com',
-    });
-    App.tv('hm-ta', 'technical-analysis', {
-      colorTheme: 'dark', locale: 'kr', isTransparent: true,
-      interval: '1D', width: '100%', height: '100%', symbol: sym,
-      showIntervalTabs: true, displayMode: 'single',
-    });
   }
 
   /* ── 페이지 등록 ─────────────────────────────────── */

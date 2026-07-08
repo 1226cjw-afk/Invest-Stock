@@ -175,6 +175,26 @@ input:focus{border-color:var(--amber)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .err{color:var(--up);background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.3);border-radius:4px;padding:12px 14px;font-size:12.5px;line-height:1.7;margin:14px}
 
+/* 국내 섹터 트리맵 (자체 구현) */
+.tm-host{position:relative;overflow:hidden;background:#05070a}
+.tm-sector{position:absolute;overflow:hidden;box-sizing:border-box;border:1px solid #05070a}
+.tm-label{
+  height:17px;line-height:17px;padding:0 6px;overflow:hidden;white-space:nowrap;
+  font-family:var(--mono);font-size:10px;color:#8b96a5;background:#10151c;
+  border-bottom:1px solid #05070a;user-select:none;
+}
+.tm-label b.up{color:var(--up)}
+.tm-label b.dn{color:var(--down)}
+.tm-tile{
+  position:absolute;overflow:hidden;box-sizing:border-box;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  border:1px solid rgba(5,7,10,.9);color:#fff;text-align:center;
+  transition:filter .1s;
+}
+.tm-tile:hover{filter:brightness(1.35);z-index:3;outline:1px solid var(--amber)}
+.tm-tile span{font-weight:700;line-height:1.15;max-width:96%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tm-tile small{font-family:var(--mono);font-size:10px;opacity:.85}
+
 /* 핫 종목 테이블 */
 .hot-table{width:100%;border-collapse:collapse;font-size:13px}
 .hot-table th{
