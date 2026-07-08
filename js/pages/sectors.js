@@ -51,9 +51,11 @@
   let krData = null;     // 마지막 조회 데이터 (리사이즈 시 재배치용)
 
   async function fetchKr(indexSym) {
+    /* ⚠ content-type 헤더를 넣으면 안 됨: 스캐너 서버의 CORS 허용 헤더 목록에
+       content-type이 없어 preflight에서 거부됨. 헤더 없이 보내면(단순 요청)
+       preflight 자체가 없어서 file://와 localhost 모두 통과 (2026-07-08 확인) */
     const r = await fetch('https://scanner.tradingview.com/korea/scan', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         options: { lang: 'ko' },
         symbols: { groups: [{ type: 'index', values: [indexSym] }] },

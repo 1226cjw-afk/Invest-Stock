@@ -133,8 +133,10 @@ Invest_Stock/
   스캐너 API + 자체 squarified treemap으로 구현했다 (`js/pages/sectors.js`,
   설정은 `config.js`의 `KR_HEATMAP` — 지수 목록·표시 종목 수·색 스케일·섹터 한글 매핑).
   미국용 위젯 dataSource: `SPX500·NASDAQ100·NASDAQCOMPOSITE·DJDJI·AllUSA` (`HEATMAP_SETS.us`).
-- 핫 종목 탭은 TradingView 공개 스캐너 API(`scanner.tradingview.com/{market}/scan`)를 직접
-  호출해 자체 테이블로 그린다(CORS 전면 허용이라 file://에서도 동작, `options.lang:"ko"`로
-  한글 종목명). 필터·정렬 프리셋은 `config.js`의 `SCANNER`에서 수정.
+- 핫 종목·국내 섹터맵은 TradingView 공개 스캐너 API(`scanner.tradingview.com/{market}/scan`)를
+  직접 호출한다(`options.lang:"ko"`로 한글 종목명). 필터·정렬 프리셋은 `config.js`의 `SCANNER`.
+  **주의: fetch에 `content-type` 헤더를 붙이면 안 된다** — 스캐너의 CORS 허용 헤더 목록에
+  content-type이 없어 preflight에서 거부됨(Failed to fetch). 헤더 없이 보내는 단순 요청은
+  preflight이 없어 file://·localhost 모두 통과 (2026-07-08 확인).
 - AI 분석은 `claude-opus-4-8` + 웹 검색 도구를 사용하며, 1회당 검색 횟수 최대 8회
   (`config.js`의 `AI.maxWebSearches`로 조절). 호출 비용은 Anthropic 콘솔에서 확인.

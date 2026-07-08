@@ -34,9 +34,10 @@
   async function scan() {
     const m = C.SCANNER.markets[mkt];
     const s = C.SCANNER.screens[scr];
+    /* ⚠ content-type 헤더 금지 — 스캐너 CORS가 이 헤더를 허용하지 않아
+       preflight에서 실패함. 헤더 없이 = 단순 요청 = preflight 없음 (sectors.js 참조) */
     const r = await fetch(`https://scanner.tradingview.com/${m.scan}/scan`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         options: { lang: 'ko' },
         filter: m.filter,
