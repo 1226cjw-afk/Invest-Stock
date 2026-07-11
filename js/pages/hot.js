@@ -6,31 +6,7 @@
   let mkt = 'america';
   let scr = 'top_gainers';
 
-  /* ── 포맷터 ─────────────────────────────────────── */
-  function fmtPrice(v, cur) {
-    if (v == null) return '—';
-    return cur === 'KRW'
-      ? Math.round(v).toLocaleString('ko-KR') + '원'
-      : '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  function fmtCap(v, cur) {
-    if (!v) return '—';
-    if (cur === 'KRW') {
-      if (v >= 1e12) return (v / 1e12).toFixed(1) + '조';
-      return Math.round(v / 1e8).toLocaleString('ko-KR') + '억';
-    }
-    if (v >= 1e12) return '$' + (v / 1e12).toFixed(2) + 'T';
-    if (v >= 1e9) return '$' + (v / 1e9).toFixed(1) + 'B';
-    return '$' + Math.round(v / 1e6).toLocaleString() + 'M';
-  }
-  function fmtVol(v) {
-    if (!v) return '—';
-    if (v >= 1e8) return (v / 1e8).toFixed(1) + '억';
-    if (v >= 1e4) return Math.round(v / 1e4).toLocaleString() + '만';
-    return v.toLocaleString();
-  }
-
-  /* ── 스캐너 호출 ─────────────────────────────────── */
+  /* ── 스캐너 호출 (포맷터는 App.fmt 공용 사용) ────── */
   async function scan() {
     const m = C.SCANNER.markets[mkt];
     const s = C.SCANNER.screens[scr];
@@ -71,10 +47,10 @@
         html += `<tr class="hot-row" data-sym="${App.esc(sym)}" data-name="${App.esc(desc || name)}">
           <td class="dim">${i + 1}</td>
           <td class="nm">${logo}<span><b>${App.esc(desc || name)}</b><small>${App.esc(sym)}</small></span></td>
-          <td class="num">${fmtPrice(close, cur)}</td>
+          <td class="num">${App.fmt.price(close, cur)}</td>
           <td class="num ${up ? 'up' : 'dn'}">${up ? '▲' : '▼'} ${Math.abs(change ?? 0).toFixed(2)}%</td>
-          <td class="num dim">${fmtVol(volume)}</td>
-          <td class="num dim">${fmtCap(cap, cur)}</td>
+          <td class="num dim">${App.fmt.vol(volume)}</td>
+          <td class="num dim">${App.fmt.cap(cap, cur)}</td>
         </tr>`;
       });
       html += '</tbody></table>';

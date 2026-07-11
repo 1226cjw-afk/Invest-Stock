@@ -220,6 +220,8 @@ input:focus{border-color:var(--amber)}
   display:flex;align-items:center;justify-content:center;padding:24px;
   backdrop-filter:blur(3px);
 }
+/* display:flex가 hidden 속성(UA의 display:none)을 덮어쓰면 닫기가 안 먹음 */
+.modal-overlay[hidden]{display:none}
 .modal-panel{
   width:min(1280px,100%);height:min(760px,100%);display:flex;flex-direction:column;
   background:var(--bg);border:1px solid var(--line-hi);border-radius:8px;overflow:hidden;
@@ -248,6 +250,31 @@ input:focus{border-color:var(--amber)}
 .report-body .src a{display:block;font-size:12px;margin:4px 0;color:var(--down)}
 .report-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .report-meta b{color:var(--amber)}
+
+/* 자체 시세 박스 (TradingView symbol-info 위젯 대체) */
+.quote-box{padding:12px 16px;display:flex;flex-direction:column;gap:9px}
+.qb-name{display:flex;align-items:center;gap:10px}
+.qb-name b{font-size:14px}
+.qb-name small{display:block;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.qb-price{font-family:var(--mono);font-size:24px;font-weight:700;line-height:1.1}
+.qb-price small{font-size:13px;margin-left:8px;font-weight:600}
+.qb-price.up{color:var(--up)}
+.qb-price.dn{color:var(--down)}
+.qb-stats{display:flex;flex-wrap:wrap;gap:5px 14px;font-size:11.5px;color:var(--muted)}
+.qb-stats b{font-family:var(--mono);color:var(--text);font-weight:600;margin-left:2px}
+.qb-empty{padding:20px 16px;color:var(--muted);font-size:12px}
+
+/* 주기 선택 셀렉트 (TA 위젯 내장 탭 대체) */
+.ivsel{
+  font-family:var(--mono);font-size:11px;padding:3px 6px;background:var(--panel);
+  color:var(--text);border:1px solid var(--line-hi);border-radius:3px;outline:none;cursor:pointer;
+}
+.ivsel:focus{border-color:var(--amber)}
+
+/* 종목 이름 검색 후보 칩 */
+.chip small{font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 6px 0 4px}
+.chip .up{color:var(--up)}
+.chip .dn{color:var(--down)}
 
 /* 시그널 페이지 */
 .sig-form{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 14px}
