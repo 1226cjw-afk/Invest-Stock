@@ -5,9 +5,10 @@
 ## 구조 요약
 
 - `js/config.js` — 심볼·목록·필터·프리셋 전부 여기 (로직 없음). 종목/탭 데이터 수정은 이 파일만.
-- `js/core.js` — 페이지 레지스트리, `App.tv(id,위젯,설정)` 위젯 팩토리, `App.openSymbolModal(sym,name)` 공용 상세 팝업, `App.store`.
+- `js/core.js` — 페이지 레지스트리, `App.tv(id,위젯,설정)` 위젯 팩토리, `App.openSymbolModal(sym,name)` 공용 상세 팝업, `App.store`,
+  자체 시세박스 `App.renderQuoteBox`(내부 `App.fetchQuote`) · 주기 셀렉트 `App.intervalSelect` · 포맷터 `App.fmt`.
 - `js/pages/*.js` — 화면 모듈. **새 탭 = 파일 1개(`App.registerPage({id,label,order,html,init})`) + index.html에 script 태그 1줄.**
-- `js/ai-client.js` — Claude API 호출 격리 (웹 배포 시 endpoint만 프록시로 교체).
+- `js/ai-client.js` — Claude API 호출 격리. 현재 사용하는 페이지 없음(AI분석 탭 2026-07-11 삭제) — 웹 확장 대비 보존, 삭제 금지.
 
 ## ★ 시장 분석 요청 시 필수 워크플로
 
@@ -39,6 +40,8 @@
 4. 리포트 전문을 채팅에도 그대로 출력.
 5. **git 커밋 + 푸시** — 리모트: https://github.com/1226cjw-afk/Invest-Stock (public).
    커밋 메시지 예: `리포트: 2026-07-08 코스피 급락 분석`. 코드 수정 시에도 작업 단위로 커밋·푸시.
+   푸시하면 GitHub Pages(https://1226cjw-afk.github.io/Invest-Stock/)에 1~2분 내 자동 배포됨 (2026-07-11 개시).
+   빌드 확인: `gh api repos/1226cjw-afk/Invest-Stock/pages/builds/latest --jq .status`
 
 ## 환경 주의
 
@@ -54,6 +57,8 @@
 
 - **scanner.tradingview.com fetch에 `content-type` 헤더 금지** — CORS 허용 헤더 목록에 없어
   preflight에서 거부됨(Failed to fetch). 문자열 body만 보내는 단순 요청으로 호출할 것.
+- 스캐너는 단일 종목 시세(`symbols:{tickers:[…]}`)와 한글 이름 검색(`filter: description match`
+  + `options.lang:'ko'`)도 지원 (2026-07-11 확인) — 위젯 대체 시 `App.fetchQuote`/`App.renderQuoteBox` 사용.
 - **TradingView embed 히트맵은 한국 데이터셋(KOSPI 등) 미지원** — 조용히 SPX500으로 폴백.
   국내 섹터맵은 자체 트리맵(`js/pages/sectors.js`) 유지, 위젯으로 되돌리지 말 것.
 - 브라우저용 API 검증 시 curl POST 성공만 믿지 말 것 — preflight(OPTIONS +
