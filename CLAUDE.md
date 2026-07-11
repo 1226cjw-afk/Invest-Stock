@@ -46,7 +46,9 @@
 - API 키·비밀값을 코드/리포트에 절대 저장하지 말 것 (키는 브라우저 localStorage에만).
 - 페이지 스크립트를 추가하면 `index.html`의 로드 순서(설정 → 데이터 → 코어 → ai-client → pages)를 지킬 것.
 - JS 수정 후 `node --check <파일>`로 문법 확인. 로컬 서버는 `node serve.js`(:8804, Python 없음).
-- 특정 탭 바로 열기: `index.html#탭id` (예: `#kr`, `#hot`) — 테스트에 유용.
+- 특정 탭 바로 열기: `index.html#탭id` (예: `#kr`, `#hot`) · 종목 상세 팝업 바로 열기: `?sym=KRX:005930`.
+- TradingView 위젯 iframe **내부**의 문구·오역(차트 툴바 '날', 안내 팝업 등)은 우리가 못 고침 —
+  위젯 밖 대체 구현(자체 시세박스 `App.renderQuoteBox`, 주기 셀렉트 `App.intervalSelect`)을 쓸 것.
 
 ## 데이터 소스 함정 (2026-07-08 확정)
 
@@ -56,5 +58,7 @@
   국내 섹터맵은 자체 트리맵(`js/pages/sectors.js`) 유지, 위젯으로 되돌리지 말 것.
 - 브라우저용 API 검증 시 curl POST 성공만 믿지 말 것 — preflight(OPTIONS +
   `Access-Control-Request-Headers`)를 별도 확인해야 브라우저 동작과 일치.
-- headless Edge는 file://·localhost 페이지의 외부 XHR을 차단함 — 렌더 검증은
-  fetch 스텁 테스트 페이지로 할 것 (`test/`는 gitignore됨).
+- headless Edge는 file://·localhost 페이지의 외부 XHR을 차단함 — 단, **배포된 GitHub Pages
+  (https://1226cjw-afk.github.io/Invest-Stock/)에서는 허용**되므로 push 후
+  `msedge --headless=new --screenshot=... "…/?sym=KRX:005930"`으로 실렌더 검증 가능 (2026-07-11 확인).
+  로컬 렌더 검증은 fetch 스텁 테스트 페이지로 할 것 (`test/`는 gitignore됨).
