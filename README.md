@@ -57,7 +57,7 @@ Invest_Stock/
 │       ├── sectors.js
 │       ├── hot.js
 │       ├── charts.js
-│       ├── analysis.js
+│       ├── reports.js
 │       └── signals.js
 └── README.md
 ```
