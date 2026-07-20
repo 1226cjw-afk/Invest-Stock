@@ -11,7 +11,7 @@ Claude API(웹 검색 기반 급등락 원인 분석)를 조합했다.
 - **그냥 쓰기**: `index.html` 더블클릭.
 - **위젯/AI 호출이 안 뜰 때** (브라우저의 file:// 제한 등): 로컬 서버로 실행.
   ```
-  cd C:\Users\1226c\Projects\Invest_Stock
+  cd C:\Users\1226c\Projects\Invest-Stock
   node serve.js
   ```
   → 브라우저에서 `http://localhost:8804`
@@ -44,7 +44,7 @@ Claude Code가 웹 검색으로 리포트를 작성한 뒤 `reports/`(마크다�
 ## 폴더 구조 (확장을 전제로 설계)
 
 ```
-Invest_Stock/
+Invest-Stock/
 ├── index.html            # 뼈대만. 탭/섹션은 페이지 모듈이 자동 생성
 ├── css/
 │   └── terminal.css      # 디자인 토큰(:root) + 컴포넌트 스타일
