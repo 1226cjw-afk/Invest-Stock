@@ -6,7 +6,10 @@
 
 - `js/config.js` — 심볼·목록·필터·프리셋 전부 여기 (로직 없음). 종목/탭 데이터 수정은 이 파일만.
 - `js/core.js` — 페이지 레지스트리, `App.tv(id,위젯,설정)` 위젯 팩토리, `App.openSymbolModal(sym,name)` 공용 상세 팝업, `App.store`,
-  자체 시세박스 `App.renderQuoteBox`(내부 `App.fetchQuote`) · 주기 셀렉트 `App.intervalSelect` · 포맷터 `App.fmt`.
+  자체 시세박스 `App.renderQuoteBox`(내부 `App.fetchQuote`) · 여러 종목 일괄 조회 `App.fetchQuotes`
+  (시장별 병렬 — 대시보드 요약 카드가 사용) · 심볼→스캐너 시장 판별 `App.scanRegion`
+  (KRX=korea, FX_IDC/FOREXCOM=forex, BINANCE=crypto, 나머지=america) ·
+  주기 셀렉트 `App.intervalSelect` · 포맷터 `App.fmt`.
 - `js/pages/*.js` — 화면 모듈. **새 탭 = 파일 1개(`App.registerPage({id,label,order,html,init})`) + index.html에 script 태그 1줄.**
 - `js/ai-client.js` — Claude API 호출 격리. 현재 사용하는 페이지 없음(AI분석 탭 2026-07-11 삭제) — 웹 확장 대비 보존, 삭제 금지.
 
@@ -67,3 +70,9 @@
   (https://1226cjw-afk.github.io/Invest-Stock/)에서는 허용**되므로 push 후
   `msedge --headless=new --screenshot=... "…/?sym=KRX:005930"`으로 실렌더 검증 가능 (2026-07-11 확인).
   로컬 렌더 검증은 fetch 스텁 테스트 페이지로 할 것 (`test/`는 gitignore됨).
+- **모바일 폭 검증 함정 (2026-07-29 확인)**: Windows headless Edge는 `--window-size=390,844`를 줘도
+  뷰포트가 **483px 아래로 안 내려간다**(`--headless=old`도 동일). 스크린샷만 390px로 잘려 나와서
+  멀쩡한 레이아웃이 "오른쪽이 잘린 것"처럼 보인다 — 이걸 버그로 오인하지 말 것.
+  진짜 폰 폭은 **`<iframe width=390>` 안에 페이지를 띄워** 재현한다(iframe 뷰포트에 미디어쿼리가 적용됨).
+  측정값은 iframe 안에서 `parent.postMessage` → 부모 DOM에 기록 → `--dump-dom`으로 읽으면 된다.
+  넘침 판정은 눈이 아니라 `document.body.scrollWidth` vs `documentElement.clientWidth`로 할 것.

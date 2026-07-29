@@ -194,6 +194,7 @@ input:focus{border-color:var(--amber)}
 .sum-card.dn .sc-chg{color:var(--down)}
 .sum-card.up .sc-price{color:var(--up)}
 .sum-card.dn .sc-price{color:var(--down)}
+.sum-card.flat .sc-chg{color:var(--muted)}
 .sum-foot{
   padding:9px 14px;border-top:1px solid var(--line);background:var(--panel2);
   font-size:12px;color:var(--muted);

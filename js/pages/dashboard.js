@@ -30,12 +30,14 @@
         card.innerHTML = `<span class="sc-label">${App.esc(item.label)}</span><span class="sc-price">—</span>`;
       } else {
         const chg = q.change || 0;
-        const up = chg >= 0;
-        card.classList.add(up ? 'up' : 'dn');
+        /* 반올림하면 0.00%가 되는 값에 ▲▼를 붙이면 오류처럼 보인다 → 보합으로 표시 */
+        const flat = Math.abs(chg) < 0.005;
+        const arrow = flat ? '—' : (chg > 0 ? '▲' : '▼');
+        card.classList.add(flat ? 'flat' : (chg > 0 ? 'up' : 'dn'));
         card.innerHTML =
           `<span class="sc-label">${App.esc(item.label)}</span>` +
           `<span class="sc-price">${App.fmt.idx(q.close)}</span>` +
-          `<span class="sc-chg">${up ? '▲' : '▼'} ${Math.abs(chg).toFixed(2)}%</span>`;
+          `<span class="sc-chg">${arrow} ${Math.abs(chg).toFixed(2)}%</span>`;
         card.onclick = () => App.openSymbolModal(item.sym, item.label);
       }
       host.appendChild(card);
