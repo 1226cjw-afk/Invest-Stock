@@ -59,6 +59,11 @@ window.App = (function () {
       if (v >= 1e4) return Math.round(v / 1e4).toLocaleString() + '만';
       return v.toLocaleString();
     },
+    /* 지수·환율처럼 통화 단위가 없는 값 (소수 2자리 고정) */
+    idx(v) {
+      if (v == null) return '—';
+      return v.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
   };
   /* 초경량 마크다운 렌더러 (##, **, - 리스트) */
   function mdLite(s) {
@@ -83,11 +88,50 @@ window.App = (function () {
   /* ── 페이지 레지스트리 ───────────────────────────── */
   function registerPage(page) { pages.push(page); }
 
+  /* ── 심볼 → 스캐너 시장 구분 ──────────────────────
+     scanner.tradingview.com/<scan>/scan 의 <scan>. 잘못 고르면 빈 배열이 옴 */
+  function scanRegion(sym) {
+    if (sym.startsWith('KRX:')) return 'korea';
+    if (/^(FX_IDC|FX|OANDA|FOREXCOM):/.test(sym)) return 'forex';
+    if (/^(BINANCE|COINBASE|BITSTAMP):/.test(sym)) return 'crypto';
+    return 'america';
+  }
+
+  /* ── 여러 종목 일괄 시세 (시장별로 나눠 병렬 호출) ──
+     한 시장이 실패해도 나머지는 표시되도록 개별 try/catch */
+  async function fetchQuotes(items) {
+    const byScan = new Map();
+    items.forEach(it => {
+      const scan = it.scan || scanRegion(it.sym);
+      if (!byScan.has(scan)) byScan.set(scan, []);
+      byScan.get(scan).push(it.sym);
+    });
+    const out = new Map();
+    await Promise.all([...byScan].map(async ([scan, tickers]) => {
+      try {
+        /* ⚠ content-type 헤더 금지 — 단순 요청이어야 preflight 없이 통과 */
+        const r = await fetch(`https://scanner.tradingview.com/${scan}/scan`, {
+          method: 'POST',
+          body: JSON.stringify({
+            options: { lang: 'ko' },
+            symbols: { tickers },
+            columns: ['description', 'close', 'change'],
+          }),
+        });
+        if (!r.ok) return;
+        ((await r.json()).data || []).forEach(row => {
+          out.set(row.s, { desc: row.d[0], close: row.d[1], change: row.d[2] });
+        });
+      } catch (e) { /* 해당 시장만 누락 */ }
+    }));
+    return out;
+  }
+
   /* ── 단일 종목 시세 (스캐너 API) ──────────────────
      TradingView symbol-info 위젯 대체: 위젯은 좁은 박스에서 글자가 겹치고
      "트레이딩뷰에서만" 안내 문구가 떠서 자체 렌더링으로 교체 (2026-07-11) */
   async function fetchQuote(sym) {
-    const scan = sym.startsWith('KRX:') ? 'korea' : 'america';
+    const scan = scanRegion(sym);
     /* ⚠ content-type 헤더 금지 — 단순 요청이어야 preflight 없이 통과 */
     const r = await fetch(`https://scanner.tradingview.com/${scan}/scan`, {
       method: 'POST',
@@ -327,5 +371,6 @@ window.App = (function () {
   }
 
   return { registerPage, show, boot, tv, DARK, esc, mdLite, fmt, store,
-           openSymbolModal, fetchQuote, renderQuoteBox, intervalSelect, taWidget };
+           openSymbolModal, fetchQuote, fetchQuotes, scanRegion,
+           renderQuoteBox, intervalSelect, taWidget };
 })();

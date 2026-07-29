@@ -25,6 +25,20 @@ window.AppConfig = {
     { proName: 'BINANCE:BTCUSDT', title: '비트코인' },
   ],
 
+  /* 대시보드 최상단 "현황 요약" 카드 (스캐너 API 자체 렌더 — 위젯 없이 즉시 로딩)
+     scan = scanner.tradingview.com/<scan>/scan 의 시장 구분. 심볼마다 다르므로 명시할 것.
+     (검증 2026-07-29: TVC:US10Y 는 어느 scan 에서도 안 나옴 → 넣지 말 것) */
+  SUMMARY_SYMBOLS: [
+    { sym: 'KRX:KOSPI',       scan: 'korea',   label: '코스피' },
+    { sym: 'KRX:KOSDAQ',      scan: 'korea',   label: '코스닥' },
+    { sym: 'SP:SPX',          scan: 'america', label: 'S&P 500' },
+    { sym: 'NASDAQ:IXIC',     scan: 'america', label: '나스닥' },
+    { sym: 'DJ:DJI',          scan: 'america', label: '다우존스' },
+    { sym: 'TVC:VIX',         scan: 'america', label: 'VIX 공포지수' },
+    { sym: 'FX_IDC:USDKRW',   scan: 'forex',   label: '달러/원' },
+    { sym: 'BINANCE:BTCUSDT', scan: 'crypto',  label: '비트코인' },
+  ],
+
   /* 대시보드 마켓 오버뷰 탭 */
   OVERVIEW_TABS: [
     { title: '미국', symbols: [

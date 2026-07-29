@@ -50,6 +50,13 @@
   let krIndex = null;
   let krData = null;     // 마지막 조회 데이터 (리사이즈 시 재배치용)
 
+  /* 확대/이동 상태.
+     CSS transform 으로 늘리는 대신 W*zoom × H*zoom 캔버스에 트리맵을 다시 계산한다 →
+     확대하면 타일 면적이 실제로 커지므로 글자가 안 깨지고, 작아서 이름이 없던
+     종목에 이름·등락률이 새로 나타난다. */
+  const ZOOM_MIN = 1, ZOOM_MAX = 8;
+  let view = { zoom: 1, panX: 0, panY: 0 };
+
   async function fetchKr(indexSym) {
     /* ⚠ content-type 헤더를 넣으면 안 됨: 스캐너 서버의 CORS 허용 헤더 목록에
        content-type이 없어 preflight에서 거부됨. 헤더 없이 보내면(단순 요청)
@@ -122,9 +129,16 @@
   function renderTreemap() {
     const host = document.getElementById('w-heat-kr');
     if (!host || !krData) return;
-    host.innerHTML = '';
     const W = host.clientWidth, H = host.clientHeight;
     if (W < 50 || H < 50) return;
+
+    clampPan(W, H);
+    const CW = W * view.zoom, CH = H * view.zoom;   // 확대된 가상 캔버스 크기
+    host.innerHTML = '';
+    const canvas = document.createElement('div');
+    canvas.className = 'tm-canvas';
+    canvas.style.cssText =
+      `left:${-view.panX}px;top:${-view.panY}px;width:${CW}px;height:${CH}px`;
 
     /* 섹터별 그룹 (시총 합 기준) */
     const groups = new Map();
@@ -140,7 +154,7 @@
     const sectors = [...groups.values()].sort((a, b) => b.value - a.value);
 
     const HEADER = 17;
-    squarify(sectors, { x: 0, y: 0, w: W, h: H }).forEach(sr => {
+    squarify(sectors, { x: 0, y: 0, w: CW, h: CH }).forEach(sr => {
       const g = sr.it;
       const sec = document.createElement('div');
       sec.className = 'tm-sector';
@@ -174,11 +188,119 @@
           tile.innerHTML = `<span style="font-size:10px">${App.esc(st.name)}</span>`;
         }
         tile.title = `${st.name} (${st.sym})\n현재가 ${Math.round(st.close).toLocaleString('ko-KR')}원 · ${pct}`;
-        tile.onclick = () => App.openSymbolModal(st.sym, st.name);
+        /* 드래그로 지도를 옮긴 직후의 클릭은 팝업을 열지 않는다 */
+        tile.onclick = () => { if (!suppressClick) App.openSymbolModal(st.sym, st.name); };
         sec.appendChild(tile);
       });
-      host.appendChild(sec);
+      canvas.appendChild(sec);
     });
+    host.appendChild(canvas);
+  }
+
+  /* ── 확대/이동 ─────────────────────────────────────
+     휠·핀치 = 확대, 드래그 = 이동. 확대 배율이 바뀌면 트리맵을 다시 계산한다. */
+  let suppressClick = false;
+  let raf = null;
+
+  function clampPan(W, H) {
+    const CW = W * view.zoom, CH = H * view.zoom;
+    view.panX = Math.max(0, Math.min(view.panX, CW - W));
+    view.panY = Math.max(0, Math.min(view.panY, CH - H));
+  }
+
+  function scheduleRender() {
+    if (raf) return;
+    raf = requestAnimationFrame(() => { raf = null; renderTreemap(); });
+  }
+
+  /* (localX, localY) 지점을 화면상 제자리에 고정한 채 factor 배 확대 */
+  function zoomAt(localX, localY, factor) {
+    const host = document.getElementById('w-heat-kr');
+    if (!host) return false;
+    const z0 = view.zoom;
+    const z1 = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z0 * factor));
+    if (z1 === z0) return false;
+    const k = z1 / z0;
+    view.zoom = z1;
+    view.panX = (view.panX + localX) * k - localX;
+    view.panY = (view.panY + localY) * k - localY;
+    clampPan(host.clientWidth, host.clientHeight);
+    return true;
+  }
+
+  function zoomCenter(factor) {
+    const host = document.getElementById('w-heat-kr');
+    if (host && zoomAt(host.clientWidth / 2, host.clientHeight / 2, factor)) renderTreemap();
+  }
+
+  function resetView() {
+    view = { zoom: 1, panX: 0, panY: 0 };
+    renderTreemap();
+  }
+
+  function bindZoom(host) {
+    const local = e => {
+      const r = host.getBoundingClientRect();
+      return [e.clientX - r.left, e.clientY - r.top];
+    };
+
+    host.addEventListener('wheel', e => {
+      if (!krData) return;
+      e.preventDefault();                       // 페이지 스크롤 대신 지도 확대
+      const [x, y] = local(e);
+      if (zoomAt(x, y, e.deltaY < 0 ? 1.18 : 1 / 1.18)) scheduleRender();
+    }, { passive: false });
+
+    /* 더블클릭 확대는 넣지 않는다 — 첫 클릭이 이미 상세 팝업을 열어버려 충돌한다.
+       배율 조절은 휠·핀치와 ＋ / － 버튼으로 한다. */
+
+    /* 포인터 이벤트로 마우스 드래그와 두 손가락 핀치를 함께 처리 */
+    const pts = new Map();          // pointerId → 마지막 좌표
+    let pinchDist = 0, moved = 0;
+    const spread = () => {
+      const [a, b] = [...pts.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+
+    host.addEventListener('pointerdown', e => {
+      host.setPointerCapture(e.pointerId);
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      moved = 0;
+      suppressClick = false;
+      if (pts.size === 2) pinchDist = spread();
+    });
+
+    host.addEventListener('pointermove', e => {
+      const p = pts.get(e.pointerId);
+      if (!p || !krData) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+
+      if (pts.size === 1) {
+        moved += Math.abs(dx) + Math.abs(dy);
+        /* 확대 상태에서 10px 넘게 끈 경우에만 이동으로 판정.
+           원본 배율에서는 어차피 움직일 곳이 없으므로, 손이 조금 흔들린 탭은 그대로 살린다. */
+        if (view.zoom > 1 && moved > 10) {
+          suppressClick = true;
+          view.panX -= dx; view.panY -= dy;
+          clampPan(host.clientWidth, host.clientHeight);
+          scheduleRender();
+        }
+      } else if (pts.size === 2) {
+        const d = spread();
+        if (pinchDist > 0 && d > 0) {
+          suppressClick = true;
+          const [a, b] = [...pts.values()];
+          const r = host.getBoundingClientRect();
+          if (zoomAt((a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top, d / pinchDist)) scheduleRender();
+        }
+        pinchDist = d;
+      }
+    });
+
+    const end = e => { pts.delete(e.pointerId); if (pts.size < 2) pinchDist = 0; };
+    host.addEventListener('pointerup', end);
+    host.addEventListener('pointercancel', end);
   }
 
   async function loadKr(indexSym) {
@@ -187,9 +309,11 @@
     try {
       krIndex = indexSym;
       krData = await fetchKr(indexSym);
+      view = { zoom: 1, panX: 0, panY: 0 };   // 지수를 바꾸면 확대 상태 초기화
       renderTreemap();
       document.getElementById('kr-stamp').textContent =
-        `시총 상위 ${krData.length}종목 · 갱신 ${new Date().toLocaleTimeString('ko-KR')} · 타일 클릭 = 상세 보기`;
+        `시총 상위 ${krData.length}종목 · 갱신 ${new Date().toLocaleTimeString('ko-KR')}` +
+        ` · 휠·핀치로 확대, 드래그로 이동 · 타일 탭 = 상세 보기`;
     } catch (e) {
       host.innerHTML = `<div class="err"><b>데이터를 불러오지 못했습니다:</b> ${App.esc(e.message)}<br>
         잠시 후 <b>⟳ 새로고침</b>을 눌러 다시 시도하세요.</div>`;
@@ -208,6 +332,8 @@
         <div class="panel-bd tm-host" id="w-heat-kr"></div>
       </div>`,
     init() {
+      const host = document.getElementById('w-heat-kr');
+      bindZoom(host);
       const wrap = document.getElementById('kr-sets');
       C.KR_HEATMAP.indexes.forEach(([sym, label], i) => {
         const b = document.createElement('button');
@@ -220,6 +346,21 @@
         };
         wrap.appendChild(b);
       });
+      const sep = document.createElement('span');
+      sep.className = 'ctl-sep';
+      wrap.appendChild(sep);
+
+      /* 확대 버튼 — 휠·핀치를 모르는 경우와 모바일 접근성용 */
+      [['＋', () => zoomCenter(1.5)],
+       ['－', () => zoomCenter(1 / 1.5)],
+       ['⤢ 초기화', resetView]].forEach(([label, fn]) => {
+        const b = document.createElement('button');
+        b.className = 'ctl';
+        b.textContent = label;
+        b.onclick = fn;
+        wrap.appendChild(b);
+      });
+
       const refresh = document.createElement('button');
       refresh.className = 'ctl';
       refresh.textContent = '⟳ 새로고침';

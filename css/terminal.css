@@ -23,6 +23,7 @@ html,body{height:100%}
 body{
   background:var(--bg);color:var(--text);font-family:var(--sans);
   font-size:14px;overflow-x:hidden;
+  -webkit-text-size-adjust:100%;   /* 가로/세로 전환 시 폰트가 제멋대로 커지는 것 방지 */
 }
 /* ── 스캔라인 + 비네트 오버레이 ─────────────────── */
 body::before{
@@ -175,8 +176,36 @@ input:focus{border-color:var(--amber)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .err{color:var(--up);background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.3);border-radius:4px;padding:12px 14px;font-size:12.5px;line-height:1.7;margin:14px}
 
+/* 현황 요약 카드 (대시보드 최상단 — 위젯 없이 스캐너 API로 직접 렌더) */
+.sum-panel .panel-hd .note{cursor:pointer}
+.sum-panel .panel-hd .note:hover{color:var(--text)}
+.sum-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:1px;background:var(--line)}
+.sum-card{
+  display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+  padding:11px 14px;background:var(--panel);border:none;cursor:pointer;
+  text-align:left;font-family:var(--sans);transition:background .12s;
+}
+.sum-card:hover{background:var(--panel2)}
+.sum-card.na{cursor:default;opacity:.55}
+.sc-label{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.sc-price{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--text);line-height:1.15}
+.sc-chg{font-family:var(--mono);font-size:12px;font-weight:600}
+.sum-card.up .sc-chg{color:var(--up)}
+.sum-card.dn .sc-chg{color:var(--down)}
+.sum-card.up .sc-price{color:var(--up)}
+.sum-card.dn .sc-price{color:var(--down)}
+.sum-foot{
+  padding:9px 14px;border-top:1px solid var(--line);background:var(--panel2);
+  font-size:12px;color:var(--muted);
+}
+.sum-foot b{font-family:var(--mono);font-size:10.5px;letter-spacing:1.5px;color:var(--muted);margin-right:8px}
+.sum-foot.clickable{cursor:pointer}
+.sum-foot.clickable:hover{color:var(--text)}
+.sf-go{color:var(--amber);margin-left:6px;white-space:nowrap}
+
 /* 국내 섹터 트리맵 (자체 구현) */
-.tm-host{position:relative;overflow:hidden;background:#05070a}
+.tm-host{position:relative;overflow:hidden;background:#05070a;touch-action:none}
+.tm-canvas{position:absolute}
 .tm-sector{position:absolute;overflow:hidden;box-sizing:border-box;border:1px solid #05070a}
 .tm-label{
   height:17px;line-height:17px;padding:0 6px;overflow:hidden;white-space:nowrap;
@@ -306,6 +335,71 @@ footer{
   font-size:11px;line-height:1.8;text-align:center;
 }
 footer b{color:var(--amber)}
+
+/* ═══════════════════════════════════════════════════════════
+   모바일 대응
+   - 100dvh: 모바일 주소창이 접히고 펴질 때 100vh가 튀는 문제 보정 (미지원 시 위의 vh 값 유지)
+   - 목표는 "폰에서 열면 현황 요약 한 화면으로 끝": 나머지 탭은 깨지지 않게만 맞춤
+═══════════════════════════════════════════════════════════ */
+.h-full{height:calc(100dvh - 230px)}
+#page-chart .grid{height:calc(100dvh - 230px)}
+#ai-result,.report-body{max-height:calc(100dvh - 250px)}
+
+/* 핫 종목 표: 컬럼이 많아 좁은 화면에서 잘림 → 표만 가로 스크롤 */
+#hot-table{overflow:auto}
+.hot-table{min-width:600px}
+
+@media(max-width:768px){
+  main{padding:8px}
+  .grid{gap:8px}
+  .mt{margin-top:8px}
+
+  /* 헤더 압축 — 로고 부제는 폰에서 자리만 차지 */
+  header{gap:10px;padding:9px 12px}
+  .logo{font-size:16px}
+  .logo-sub{display:none}
+  .clock{font-size:11px;width:100%;order:3}
+  .sessions{gap:6px}
+
+  /* 탭·버튼 터치 영역 확보(44px 목표) */
+  nav{padding:0 6px}
+  .tab{padding:14px 13px 12px}
+  .tab .fk{display:none}
+  .ctl{padding:10px 13px}
+  .controls{padding:8px 10px;gap:6px}
+
+  /* 현황 요약: 2열 고정 — 폰에서 한 화면에 8칸이 들어옴 */
+  .sum-cards{grid-template-columns:1fr 1fr}
+  .sc-price{font-size:17px}
+
+  .panel-hd{flex-wrap:wrap;padding:8px 12px}
+  .panel-hd .note{margin-left:0;flex-basis:100%}
+
+  .h-tall{height:60dvh;min-height:340px}
+  .h-mid{height:280px}
+  .h-full{height:calc(100dvh - 200px);min-height:360px}
+
+  /* 지수 차트: 목록과 차트가 한 화면 높이를 나눠 갖지 않도록 분리 */
+  #page-chart .grid{height:auto}
+  #page-chart .symlist{max-height:190px}
+  #page-chart .panel:last-child{height:60dvh;min-height:320px}
+
+  /* 리포트 목록도 높이 제한 (인라인 스타일보다 우선하도록 !important) */
+  #report-list{max-height:170px!important}
+  .report-body,#ai-result{padding:14px 15px;max-height:none}
+
+  /* 종목 상세 팝업 = 전체화면 */
+  .modal-overlay{padding:0}
+  .modal-panel{width:100%;height:100%;border-radius:0;border:none}
+  .modal-grid{padding:8px;gap:8px}
+  .modal-hd{padding:10px 12px;flex-wrap:wrap}
+  .modal-hd b{font-size:13px;flex-basis:100%;margin-bottom:4px}
+
+  .hot-table td,.hot-table th{padding:8px 10px}
+  .watch-grid{grid-template-columns:1fr}
+  .sig-form input{width:100%;flex:1 1 100%}
+  footer{padding:12px 14px 20px}
+}
 
 /* 스크롤바 */
 ::-webkit-scrollbar{width:9px;height:9px}

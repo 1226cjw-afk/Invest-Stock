@@ -84,7 +84,7 @@
           <span class="ctl-sep"></span>
           <button class="ctl" id="hot-refresh">⟳ 새로고침</button>
         </div>
-        <div class="panel-bd" id="hot-table" style="overflow-y:auto"></div>
+        <div class="panel-bd" id="hot-table"></div>
       </div>`,
     init() {
       render();
