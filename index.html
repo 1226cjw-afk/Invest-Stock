@@ -34,6 +34,9 @@
 
 <div id="tape"></div>
 
+<!-- 시장 폭 스트립: 내용은 js/breadth.js가 채웁니다 (모든 탭에서 항상 보임) -->
+<div id="breadth" class="bd-strip"></div>
+
 <!-- 탭 버튼과 페이지 섹션은 js/pages/* 의 registerPage()로부터 자동 생성됩니다 -->
 <nav id="nav"></nav>
 <main id="main"></main>
@@ -43,10 +46,11 @@
   <b>⚠ 본 페이지의 모든 정보(기술적 시그널·AI 분석 포함)는 투자 참고 자료일 뿐 매수·매도 권유가 아니며, 투자의 최종 판단과 책임은 본인에게 있습니다.</b>
 </footer>
 
-<!-- 로드 순서: 설정 → 데이터 → 코어 → AI 클라이언트 → 페이지 모듈 → 부팅 -->
+<!-- 로드 순서: 설정 → 데이터 → 코어 → 전역 위젯 → AI 클라이언트 → 페이지 모듈 → 부팅 -->
 <script src="js/config.js"></script>
 <script src="js/reports-data.js"></script>
 <script src="js/core.js"></script>
+<script src="js/breadth.js"></script>
 <script src="js/ai-client.js"></script>
 <script src="js/pages/dashboard.js"></script>
 <script src="js/pages/sectors.js"></script>

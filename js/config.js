@@ -39,6 +39,31 @@ window.AppConfig = {
     { sym: 'BINANCE:BTCUSDT', scan: 'crypto',  label: '비트코인' },
   ],
 
+  /* 헤더 티커 아래 "시장 폭" 스트립
+     지수 구성종목을 통째로 받아(등락률 · 거래대금) 브라우저에서 직접 집계한다.
+     ⚠ 검증 2026-08-03:
+       · 지수 한정은 symbols.groups(type:'index')로만 동작 — filter의 left:'index'는 항상 0건
+       · 거래대금 컬럼명은 'Value.Traded' — 'value_traded'/'turnover'는 항상 null
+       · 실측 페이로드: 코스피 42KB(808종목) · 코스닥 89KB(1727) · SPX 28KB · NDX 6KB, 각 ~450ms */
+  BREADTH: {
+    refreshSec: 90,      // 탭이 보일 때만 갱신 (한 번에 ~165KB이므로 짧게 두지 말 것)
+    maxRows: 2500,       // 구성종목 최대치 (코스닥 1727 커버)
+    limitPct: 29,        // 국내 상·하한가 근사 — 호가 단위 탓에 정확히 ±30%가 찍히지 않음
+    markets: [
+      { key: 'kospi',  scan: 'korea',   index: 'KRX:KOSPI',  label: '코스피',
+        cur: 'KRW', region: 'kr', limits: true, hot: { mkt: 'korea', uni: 'kospi' } },
+      { key: 'kosdaq', scan: 'korea',   index: 'KRX:KOSDAQ', label: '코스닥',
+        cur: 'KRW', region: 'kr', limits: true, hot: { mkt: 'korea', uni: 'kosdaq' } },
+      { key: 'spx',    scan: 'america', index: 'SP:SPX',     label: 'S&P 500',
+        cur: 'USD', region: 'us', hot: { mkt: 'america', uni: 'spx' } },
+      { key: 'ndx',    scan: 'america', index: 'NASDAQ:NDX', label: '나스닥 100',
+        cur: 'USD', region: 'us', hot: { mkt: 'america', uni: 'ndx' } },
+    ],
+    regions: [{ key: 'kr', label: '국내' }, { key: 'us', label: '미국' }],
+    /* 시장 온도 = 상승 ÷ (상승+하락) × 100. 구간별 [최소점수, 라벨, CSS클래스] */
+    temp: [[75, '과열', 'hot'], [60, '강세', 'warm'], [40, '중립', 'mid'], [25, '약세', 'cool'], [0, '공포', 'cold']],
+  },
+
   /* 대시보드 마켓 오버뷰 탭 */
   OVERVIEW_TABS: [
     { title: '미국', symbols: [
@@ -123,6 +148,12 @@ window.AppConfig = {
     markets: {
       america: {
         label: '🇺🇸 미국', scan: 'america', currency: 'USD',
+        /* [키, 라벨, 지수심볼] — 지수심볼이 null이면 시장 전체. BREADTH.hot.uni 값과 맞출 것 */
+        universes: [
+          ['all', '전체',       null],
+          ['spx', 'S&P 500',   'SP:SPX'],
+          ['ndx', '나스닥 100', 'NASDAQ:NDX'],
+        ],
         filter: [
           { left: 'type', operation: 'equal', right: 'stock' },
           { left: 'subtype', operation: 'in_range', right: ['common'] },
@@ -133,6 +164,11 @@ window.AppConfig = {
       },
       korea: {
         label: '🇰🇷 한국', scan: 'korea', currency: 'KRW',
+        universes: [
+          ['all',    '전체',   null],
+          ['kospi',  '코스피', 'KRX:KOSPI'],
+          ['kosdaq', '코스닥', 'KRX:KOSDAQ'],
+        ],
         filter: [
           { left: 'type', operation: 'equal', right: 'stock' },
           { left: 'subtype', operation: 'in_range', right: ['common'] },
@@ -143,6 +179,7 @@ window.AppConfig = {
     screens: {
       top_gainers:      { label: '📈 급등주',       sortBy: 'change',           order: 'desc' },
       top_losers:       { label: '📉 급락주',       sortBy: 'change',           order: 'asc'  },
+      top_value:        { label: '💰 거래대금',     sortBy: 'Value.Traded',     order: 'desc' },
       volume_leaders:   { label: '🔥 거래량 상위',   sortBy: 'volume',           order: 'desc' },
       most_capitalized: { label: '🏦 시가총액 상위', sortBy: 'market_cap_basic', order: 'desc' },
     },

@@ -10,6 +10,9 @@
   (시장별 병렬 — 대시보드 요약 카드가 사용) · 심볼→스캐너 시장 판별 `App.scanRegion`
   (KRX=korea, FX_IDC/FOREXCOM=forex, BINANCE=crypto, 나머지=america) ·
   주기 셀렉트 `App.intervalSelect` · 포맷터 `App.fmt`.
+- `js/breadth.js` — 헤더 티커 아래 **시장 폭 스트립**(전역, 탭 아님). 지수 구성종목을 통째로 받아
+  상승/보합/하락 종목 수·거래대금·상한가를 직접 집계하고 시장 온도(상승÷(상승+하락)×100)를 낸다.
+  세그먼트를 누르면 `AppHot.goto(시장, 지수)`로 핫 종목 탭이 그 지수로 열림. 설정은 `AppConfig.BREADTH`.
 - `js/pages/*.js` — 화면 모듈. **새 탭 = 파일 1개(`App.registerPage({id,label,order,html,init})`) + index.html에 script 태그 1줄.**
 - `js/ai-client.js` — Claude API 호출 격리. 현재 사용하는 페이지 없음(AI분석 탭 2026-07-11 삭제) — 웹 확장 대비 보존, 삭제 금지.
 
@@ -50,7 +53,9 @@
 
 - 한글 파일은 Read 도구로 읽을 것 (PowerShell `Get-Content`는 인코딩 깨짐).
 - API 키·비밀값을 코드/리포트에 절대 저장하지 말 것 (키는 브라우저 localStorage에만).
-- 페이지 스크립트를 추가하면 `index.html`의 로드 순서(설정 → 데이터 → 코어 → ai-client → pages)를 지킬 것.
+- 페이지 스크립트를 추가하면 `index.html`의 로드 순서(설정 → 데이터 → 코어 → breadth → ai-client → pages)를 지킬 것.
+- 헤더 쪽에 줄을 더하거나 빼면 CSS 토큰 **`--chrome`**(고정 요소가 먹는 세로 높이)만 고치면 된다.
+  꽉 차는 패널들이 `calc(100vh - var(--chrome))`로 높이를 잡으므로 여기가 어긋나면 전 탭이 함께 어긋난다.
 - JS 수정 후 `node --check <파일>`로 문법 확인. 로컬 서버는 `node serve.js`(:8804, Python 없음).
 - 특정 탭 바로 열기: `index.html#탭id` (예: `#kr`, `#hot`) · 종목 상세 팝업 바로 열기: `?sym=KRX:005930`.
 - TradingView 위젯 iframe **내부**의 문구·오역(차트 툴바 '날', 안내 팝업 등)은 우리가 못 고침 —
@@ -62,6 +67,13 @@
   preflight에서 거부됨(Failed to fetch). 문자열 body만 보내는 단순 요청으로 호출할 것.
 - 스캐너는 단일 종목 시세(`symbols:{tickers:[…]}`)와 한글 이름 검색(`filter: description match`
   + `options.lang:'ko'`)도 지원 (2026-07-11 확인) — 위젯 대체 시 `App.fetchQuote`/`App.renderQuoteBox` 사용.
+- **거래대금 컬럼명은 `Value.Traded`** — `value_traded`·`turnover`·`total_value_traded`는 항상 `null`이
+  오고 그 컬럼으로 정렬하면 **에러 없이 뒤죽박죽 결과**가 온다 (2026-08-03 확인).
+- **지수 구성종목 한정은 `symbols:{groups:[{type:'index',values:['KRX:KOSPI']}]}`로만 동작.**
+  `filter`에 `left:'index'`를 넣으면 조용히 0건이 온다. `symbols.groups`와 `filter`는 함께 써도 됨.
+- `range:[0,1]`로 보내면 `totalCount`에 조건 충족 종목 수가 온다(시장 폭 카운트에 사용 가능).
+  다만 방향별로 요청이 나뉘므로, 구성종목을 통째로 받아 세는 편이 싸다 — `js/breadth.js` 참조
+  (코스피 808종목 42KB · 코스닥 1727종목 89KB · SPX 28KB · NDX 6KB, 각 ~450ms).
 - **TradingView embed 히트맵은 한국 데이터셋(KOSPI 등) 미지원** — 조용히 SPX500으로 폴백.
   국내 섹터맵은 자체 트리맵(`js/pages/sectors.js`) 유지, 위젯으로 되돌리지 말 것.
 - 브라우저용 API 검증 시 curl POST 성공만 믿지 말 것 — preflight(OPTIONS +
@@ -73,6 +85,14 @@
 - **모바일 폭 검증 함정 (2026-07-29 확인)**: Windows headless Edge는 `--window-size=390,844`를 줘도
   뷰포트가 **483px 아래로 안 내려간다**(`--headless=old`도 동일). 스크린샷만 390px로 잘려 나와서
   멀쩡한 레이아웃이 "오른쪽이 잘린 것"처럼 보인다 — 이걸 버그로 오인하지 말 것.
-  진짜 폰 폭은 **`<iframe width=390>` 안에 페이지를 띄워** 재현한다(iframe 뷰포트에 미디어쿼리가 적용됨).
-  측정값은 iframe 안에서 `parent.postMessage` → 부모 DOM에 기록 → `--dump-dom`으로 읽으면 된다.
   넘침 판정은 눈이 아니라 `document.body.scrollWidth` vs `documentElement.clientWidth`로 할 것.
+- **CDP를 쓰면 위 함정이 통째로 사라진다 (2026-08-03 확인, 권장 방법)**: `--remote-debugging-port`로
+  띄우고 `Emulation.setDeviceMetricsOverride{width:390,height:844,mobile:true}`를 보내면
+  `clientWidth`가 실제로 390이 된다(iframe 우회 불필요). Node 24의 전역 `WebSocket`으로 바로 붙을 수 있음.
+  이 방식이면 `--dump-dom` 대신 `Runtime.evaluate`로 아무 값이나 측정하고, 클릭·탭 전환까지 스크립트로 검증 가능.
+  덤으로 **remote-debugging으로 띄운 Edge는 localhost 페이지의 외부 XHR도 통과시킨다** —
+  `node serve.js`(:8804)에 붙이면 배포 전에 실데이터 렌더를 로컬에서 확인할 수 있다.
+- `--virtual-time-budget`은 웹소켓으로 실시간 연결을 유지하는 사이트에서 **영원히 끝나지 않는다**
+  (가상 시간이 진행되지 않음). 그런 페이지는 실제 `setTimeout` 대기로 렌더를 기다릴 것.
+- 티커 테이프 위젯은 `displayMode:'adaptive'`면 좁은 화면에서 여러 줄로 쌓여 46px짜리 `#tape`를
+  넘쳐 아래 줄을 덮는다 → `'regular'` 고정 + `#tape{overflow:hidden}` (2026-08-03 390px 실측).

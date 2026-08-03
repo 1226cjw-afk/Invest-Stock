@@ -64,6 +64,17 @@ window.App = (function () {
       if (v == null) return '—';
       return v.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
+    /* 원화 환산 표시 (서학개미 뷰) — 가격은 원 단위까지, 시총·대금은 조/억으로 줄임 */
+    krw(v) {
+      if (v == null) return '—';
+      return '₩' + Math.round(v).toLocaleString('ko-KR');
+    },
+    krwShort(v) {
+      if (!v) return '—';
+      if (v >= 1e12) return '₩' + (v / 1e12).toFixed(1) + '조';
+      if (v >= 1e8) return '₩' + Math.round(v / 1e8).toLocaleString('ko-KR') + '억';
+      return '₩' + Math.round(v).toLocaleString('ko-KR');
+    },
   };
   /* 초경량 마크다운 렌더러 (##, **, - 리스트) */
   function mdLite(s) {
@@ -125,6 +136,23 @@ window.App = (function () {
       } catch (e) { /* 해당 시장만 누락 */ }
     }));
     return out;
+  }
+
+  /* ── 달러/원 환율 (서학개미 원화 뷰 공용) ──────────
+     60초 캐시. 실패 시 예외를 던지므로 호출부에서 원화 표시를 생략할 것 */
+  let fxCache = { at: 0, val: null };
+  async function fxUsdKrw() {
+    if (fxCache.val && Date.now() - fxCache.at < 60000) return fxCache.val;
+    /* ⚠ content-type 헤더 금지 — 단순 요청이어야 preflight 없이 통과 */
+    const r = await fetch('https://scanner.tradingview.com/forex/scan', {
+      method: 'POST',
+      body: JSON.stringify({ symbols: { tickers: ['FX_IDC:USDKRW'] }, columns: ['close', 'change'] }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = (await r.json()).data;
+    if (!d || !d.length) throw new Error('환율 정보 없음');
+    fxCache = { at: Date.now(), val: { rate: d[0].d[0], change: d[0].d[1] || 0 } };
+    return fxCache.val;
   }
 
   /* ── 단일 종목 시세 (스캐너 API) ──────────────────
@@ -356,10 +384,15 @@ window.App = (function () {
     updateClock();
     setInterval(updateClock, 1000);
 
+    /* displayMode는 'regular'(한 줄) 고정 — 'adaptive'는 좁은 화면에서 여러 줄로 쌓여
+       46px짜리 #tape 밖으로 삐져나온다 (2026-08-03 390px 실측) */
     tv('tape', 'ticker-tape', {
-      ...DARK, displayMode: 'adaptive', showSymbolLogo: true,
+      ...DARK, displayMode: 'regular', showSymbolLogo: true,
       symbols: C.TAPE_SYMBOLS,
     });
+
+    /* 시장 폭 스트립 — js/breadth.js가 로드됐을 때만 (없으면 조용히 생략) */
+    if (window.AppBreadth) window.AppBreadth.init();
 
     /* URL 해시로 시작 탭 지정 가능 (예: index.html#kr) */
     const initial = location.hash.slice(1);
@@ -371,6 +404,6 @@ window.App = (function () {
   }
 
   return { registerPage, show, boot, tv, DARK, esc, mdLite, fmt, store,
-           openSymbolModal, fetchQuote, fetchQuotes, scanRegion,
+           openSymbolModal, fetchQuote, fetchQuotes, scanRegion, fxUsdKrw,
            renderQuoteBox, intervalSelect, taWidget };
 })();

@@ -17,6 +17,9 @@
   --down:#4a9eff;    /* 파랑 = 하락 */
   --mono:'JetBrains Mono',monospace;
   --sans:'IBM Plex Sans KR',sans-serif;
+  /* 본문이 아닌 고정 요소(헤더+티커+시장폭 스트립+탭+푸터)가 차지하는 세로 높이.
+     꽉 차는 패널들이 이 값을 빼서 높이를 잡으므로, 상단에 줄을 추가하면 여기만 고치면 된다. */
+  --chrome:292px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -62,7 +65,68 @@ header{
 .clock b{color:var(--text)}
 
 /* ── 티커 테이프 ────────────────────────────────── */
-#tape{height:46px;border-bottom:1px solid var(--line);background:var(--panel)}
+/* overflow:hidden 필수 — 위젯이 좁은 화면에서 46px보다 크게 그려져 아래 줄을 덮는다
+   (2026-08-03 390px 실측). 위젯 설정도 displayMode:'regular'로 한 줄 고정. */
+#tape{height:46px;overflow:hidden;border-bottom:1px solid var(--line);background:var(--panel)}
+
+/* ── 시장 폭 스트립 (js/breadth.js) ─────────────────
+   지수별 상승/보합/하락 비율 막대 + 거래대금 + 시장 온도.
+   좁은 화면에서는 줄바꿈 대신 가로 스크롤 — 높이가 변하면 --chrome이 어긋난다. */
+.bd-strip{
+  display:flex;align-items:stretch;height:62px;
+  border-bottom:1px solid var(--line);background:var(--panel);
+  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+}
+.bd-strip::-webkit-scrollbar{display:none}
+.bd-seg,.bd-temp{
+  flex:1 1 0;min-width:206px;display:flex;flex-direction:column;justify-content:center;gap:5px;
+  padding:0 14px;border:none;border-right:1px solid var(--line);
+  background:none;color:var(--text);font-family:var(--sans);text-align:left;
+}
+.bd-seg{cursor:pointer;transition:background .12s}
+.bd-seg:hover{background:var(--panel2)}
+.bd-seg[disabled]{cursor:default;opacity:.45}
+.bd-row{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
+.bd-name{font-size:12px;font-weight:700}
+.bd-name em{font-style:normal;font-family:var(--mono);font-size:9.5px;color:#3d4653;margin-left:5px}
+.bd-cnt{font-family:var(--mono);font-size:11px;margin-left:auto}
+.bd-cnt.dim{color:var(--muted)}
+.bd-cnt .up{color:var(--up);font-weight:600}
+.bd-cnt .dn{color:var(--down);font-weight:600}
+.bd-cnt .fl{color:var(--muted);margin:0 6px}
+.bd-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:#161c25}
+.bd-bar i{display:block;height:100%}
+.bd-bar .b-up{background:var(--up)}
+.bd-bar .b-fl{background:#39424f}
+.bd-bar .b-dn{background:var(--down)}
+.bd-sub{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap}
+.bd-sub i{font-style:normal}
+.bd-sub .up{color:var(--up)}
+.bd-sub .dn{color:var(--down)}
+
+/* 시장 온도 = 상승 ÷ (상승+하락) × 100 */
+.bd-temp{flex:0 0 auto;min-width:132px;background:var(--panel2)}
+.bd-tlabel{font-family:var(--mono);font-size:9.5px;letter-spacing:1.5px;color:var(--muted)}
+.bd-tval{display:flex;align-items:baseline;gap:7px;font-family:var(--mono);line-height:1}
+.bd-tval b{font-size:18px;font-weight:700}
+.bd-tval span{font-size:11px;font-weight:600}
+.bd-gauge{
+  position:relative;height:6px;border-radius:3px;opacity:.5;
+  background:linear-gradient(90deg,var(--down) 0%,#39424f 50%,var(--up) 100%);
+}
+.bd-gauge i{position:absolute;top:-2px;width:2px;height:10px;margin-left:-1px;background:#fff;box-shadow:0 0 5px #fff}
+.t-hot  .bd-tval b,.t-hot  .bd-tval span{color:var(--up)}
+.t-warm .bd-tval b,.t-warm .bd-tval span{color:#ff8a94}
+.t-mid  .bd-tval b,.t-mid  .bd-tval span{color:var(--text)}
+.t-cool .bd-tval b,.t-cool .bd-tval span{color:#8fc2ff}
+.t-cold .bd-tval b,.t-cold .bd-tval span{color:var(--down)}
+.bd-refresh{
+  flex:0 0 auto;display:flex;flex-direction:column;justify-content:center;gap:4px;
+  padding:0 14px;background:none;border:none;color:var(--muted);
+  font-family:var(--mono);font-size:10px;line-height:1.3;cursor:pointer;white-space:nowrap;
+}
+.bd-refresh:hover{color:var(--amber);background:var(--panel2)}
+.bd-rtime{color:#4b5563}
 
 /* ── 탭 내비게이션 ──────────────────────────────── */
 nav{
@@ -106,10 +170,10 @@ main{padding:14px;min-height:calc(100vh - 220px)}
 .col{display:flex;flex-direction:column;gap:14px}
 
 /* 히트맵/스크리너 */
-.h-full{height:calc(100vh - 230px);min-height:560px}
+.h-full{height:calc(100vh - var(--chrome));min-height:560px}
 
 /* 차트 페이지 */
-#page-chart .grid{grid-template-columns:236px 1fr;height:calc(100vh - 230px);min-height:560px}
+#page-chart .grid{grid-template-columns:236px 1fr;height:calc(100vh - var(--chrome));min-height:560px}
 @media(max-width:900px){#page-chart .grid{grid-template-columns:1fr}}
 .symlist{display:flex;flex-direction:column;overflow-y:auto}
 .symlist .group{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;padding:10px 14px 4px}
@@ -236,6 +300,10 @@ input:focus{border-color:var(--amber)}
 .hot-table td.nm{text-align:left;display:flex;align-items:center;gap:10px}
 .hot-table td.nm small{display:block;font-family:var(--mono);font-size:10px;color:var(--muted)}
 .hot-table td.num{font-family:var(--mono)}
+/* 서학개미 원화 병기 — 달러 값 아래 붙는 보조 줄 */
+.hot-table td.num small{display:block;font-family:var(--mono);font-size:10px;font-weight:400;color:var(--muted);margin-top:1px}
+.hot-table td.num small.up{color:#b8555e}
+.hot-table td.num small.dn{color:#4a7bb0}
 .hot-table td.dim{color:var(--muted)}
 .hot-table .up{color:var(--up);font-weight:600}
 .hot-table .dn{color:var(--down);font-weight:600}
@@ -342,16 +410,22 @@ footer b{color:var(--amber)}
    - 100dvh: 모바일 주소창이 접히고 펴질 때 100vh가 튀는 문제 보정 (미지원 시 위의 vh 값 유지)
    - 목표는 "폰에서 열면 현황 요약 한 화면으로 끝": 나머지 탭은 깨지지 않게만 맞춤
 ═══════════════════════════════════════════════════════════ */
-.h-full{height:calc(100dvh - 230px)}
-#page-chart .grid{height:calc(100dvh - 230px)}
+.h-full{height:calc(100dvh - var(--chrome))}
+#page-chart .grid{height:calc(100dvh - var(--chrome))}
 #ai-result,.report-body{max-height:calc(100dvh - 250px)}
 
 /* 핫 종목 표: 컬럼이 많아 좁은 화면에서 잘림 → 표만 가로 스크롤 */
 #hot-table{overflow:auto}
-.hot-table{min-width:600px}
+.hot-table{min-width:760px}
 
 @media(max-width:768px){
   main{padding:8px}
+  /* 스트립이 조금 낮아지는 만큼(62→56) 본문이 가져갈 높이도 되돌려 준다 */
+  :root{--chrome:256px}
+  .bd-strip{height:56px}
+  .bd-seg,.bd-temp{min-width:172px;padding:0 11px}
+  .bd-temp{min-width:118px}
+  .bd-refresh{padding:0 11px}
   .grid{gap:8px}
   .mt{margin-top:8px}
 
@@ -366,8 +440,11 @@ footer b{color:var(--amber)}
   nav{padding:0 6px}
   .tab{padding:14px 13px 12px}
   .tab .fk{display:none}
-  .ctl{padding:10px 13px}
-  .controls{padding:8px 10px;gap:6px}
+  .ctl{padding:10px 13px;flex:none}
+  /* 버튼이 늘어 4줄(191px)까지 쌓이면 표가 볼 수 없이 좁아진다 → 탭 바처럼 한 줄 가로 스크롤 */
+  .controls{padding:8px 10px;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .controls::-webkit-scrollbar{display:none}
+  .ctl-sep{flex:none}
 
   /* 현황 요약: 2열 고정 — 폰에서 한 화면에 8칸이 들어옴 */
   .sum-cards{grid-template-columns:1fr 1fr}
@@ -378,7 +455,7 @@ footer b{color:var(--amber)}
 
   .h-tall{height:60dvh;min-height:340px}
   .h-mid{height:280px}
-  .h-full{height:calc(100dvh - 200px);min-height:360px}
+  .h-full{height:calc(100dvh - var(--chrome));min-height:360px}
 
   /* 지수 차트: 목록과 차트가 한 화면 높이를 나눠 갖지 않도록 분리 */
   #page-chart .grid{height:auto}
