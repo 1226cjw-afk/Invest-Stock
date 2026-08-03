@@ -56,6 +56,9 @@
 - 페이지 스크립트를 추가하면 `index.html`의 로드 순서(설정 → 데이터 → 코어 → breadth → ai-client → pages)를 지킬 것.
 - 헤더 쪽에 줄을 더하거나 빼면 CSS 토큰 **`--chrome`**(고정 요소가 먹는 세로 높이)만 고치면 된다.
   꽉 차는 패널들이 `calc(100vh - var(--chrome))`로 높이를 잡으므로 여기가 어긋나면 전 탭이 함께 어긋난다.
+- 색은 **한국 관례**: 상승 빨강(`--up`) · 하락 파랑(`--down`). 서구식 green-up으로 만들지 말 것.
+- 가로로 늘어나는 줄(`nav`·`.controls`·`.bd-strip`)은 모바일에서 **줄바꿈이 아니라 가로 스크롤**이
+  관례 — 버튼이 늘면 줄이 쌓여 본문을 가린다 (실측: 컨트롤이 4줄 191px까지 쌓여 표를 덮음).
 - JS 수정 후 `node --check <파일>`로 문법 확인. 로컬 서버는 `node serve.js`(:8804, Python 없음).
 - 특정 탭 바로 열기: `index.html#탭id` (예: `#kr`, `#hot`) · 종목 상세 팝업 바로 열기: `?sym=KRX:005930`.
 - TradingView 위젯 iframe **내부**의 문구·오역(차트 툴바 '날', 안내 팝업 등)은 우리가 못 고침 —
@@ -78,10 +81,12 @@
   국내 섹터맵은 자체 트리맵(`js/pages/sectors.js`) 유지, 위젯으로 되돌리지 말 것.
 - 브라우저용 API 검증 시 curl POST 성공만 믿지 말 것 — preflight(OPTIONS +
   `Access-Control-Request-Headers`)를 별도 확인해야 브라우저 동작과 일치.
-- headless Edge는 file://·localhost 페이지의 외부 XHR을 차단함 — 단, **배포된 GitHub Pages
-  (https://1226cjw-afk.github.io/Invest-Stock/)에서는 허용**되므로 push 후
-  `msedge --headless=new --screenshot=... "…/?sym=KRX:005930"`으로 실렌더 검증 가능 (2026-07-11 확인).
-  로컬 렌더 검증은 fetch 스텁 테스트 페이지로 할 것 (`test/`는 gitignore됨).
+- **렌더 검증 순서: ① 로컬 `node serve.js`에 CDP로 붙어 실데이터 확인 → ② 커밋·푸시 →
+  ③ 배포본에서 재확인.** 배포본(https://1226cjw-afk.github.io/Invest-Stock/)은
+  `?sym=KRX:005930` 같은 쿼리로 바로 열어 볼 수 있다.
+  ⚠ "headless Edge가 localhost 외부 XHR을 차단한다"(2026-07-11 메모)는 `--screenshot` 단발 실행
+  한정이며, `--remote-debugging-port`로 띄우면 통과한다 (2026-08-03 정정 — 아래 CDP 항목).
+  따라서 fetch 스텁 테스트 페이지는 더 이상 필요 없다 (`test/`는 gitignore됨).
 - **모바일 폭 검증 함정 (2026-07-29 확인)**: Windows headless Edge는 `--window-size=390,844`를 줘도
   뷰포트가 **483px 아래로 안 내려간다**(`--headless=old`도 동일). 스크린샷만 390px로 잘려 나와서
   멀쩡한 레이아웃이 "오른쪽이 잘린 것"처럼 보인다 — 이걸 버그로 오인하지 말 것.
