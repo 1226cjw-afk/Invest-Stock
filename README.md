@@ -27,10 +27,9 @@ Claude API(웹 검색 기반 급등락 원인 분석)를 조합했다.
 | 2 | 미국 섹터맵 | S&P 500 섹터 히트맵 — TradingView 위젯 (나스닥100·다우 등 전환) |
 | 3 | 국내 섹터맵 | 코스피/코스닥 섹터 트리맵 — **자체 구현** (스캐너 API + squarified treemap, 타일 클릭 = 상세 팝업, 빨강=상승/파랑=하락) |
 | 4 | 핫 종목 | 급등/급락/거래량/시총 자체 테이블 — **종목 클릭 시 페이지 안 팝업**(차트+시그널)으로 상세 확인 |
-| 5 | 지수 차트 | 주요 지수·금리·환율·원자재 고급 차트 |
-| 6 | 급등락 AI 분석 | Claude + 웹 검색으로 급등락 원인 리포트 생성 (API 키 필요) |
-| 7 | AI 리포트 | Claude Code 세션에서 분석·저장한 리포트 보관함 (API 키 불필요) |
-| 8 | 매매 시그널 | TradingView 기술적 분석 게이지(적극매수~적극매도) + 관심목록 보드 |
+| 5 | 지수 차트 | 주요 지수·금리·환율·원자재 고급 차트 (국내 지수는 네이버 금융 차트 이미지) |
+| 6 | AI 리포트 | Claude Code 세션에서 분석·저장한 리포트 보관함 (API 키 불필요) |
+| 7 | 매매 시그널 | 기술적 분석 게이지(적극매수~적극매도) + 전 주기(1분~1달) 한눈 보기 + 관심목록 보드 — 자체 렌더 |
 
 ### API 키 없이 AI 분석 쓰는 법 (권장 워크플로)
 이 폴더에서 Claude Code를 열고 "오늘 코스피 왜 빠졌는지 분석해줘"처럼 물어보면,
@@ -91,7 +90,8 @@ Invest-Stock/
              <div class="panel-bd" id="w-my"></div>
            </div>`,
     init() {                 // 탭 첫 진입 시 1회 실행 (lazy load)
-      App.tv('w-my', 'advanced-chart', { autosize: true, symbol: 'KRX:005930', theme: 'dark', locale: 'kr' });
+      // ⚠ KRX:* 는 위젯에서 막힌다 → 국내 종목은 App.krxChart('w-my', 'KRX:005930')
+      App.tv('w-my', 'advanced-chart', { autosize: true, symbol: 'NASDAQ:NVDA', theme: 'dark', locale: 'kr' });
     },
   });
 })();
@@ -127,6 +127,11 @@ Invest-Stock/
 ## 알아두면 좋은 것
 
 - TradingView 무료 위젯 시세는 거래소에 따라 **지연 시세**일 수 있다.
+- **TradingView 무료 위젯은 KRX 전 종목·지수와 일부 TVC 심볼(VIX·US10Y·DXY·RUT·NI225·HSI·UKX)을
+  "TradingView에서만 사용할 수 있습니다"로 막는다** (2026-10-08 확인 — 차트·티커·오버뷰 공통).
+  대체 심볼 목록은 `config.js` 상단 주석. 국내 차트는 네이버 금융 차트 이미지(`App.krxChart`),
+  기술적 분석은 스캐너 `Recommend.All|MA|Other` 컬럼으로 직접 그린다(`App.taWidget`).
+  스캐너 API 자체는 이 제한과 무관하다.
 - **TradingView embed 히트맵 위젯은 한국 데이터셋을 지원하지 않는다** (`dataSource:"KOSPI"` 등을
   넣어도 조용히 SPX500으로 폴백 — 2026-07-08 headless 렌더 대조 실험으로 확인. NASDAQ100은
   정상 적용되므로 설정 전달 문제가 아니라 임베드 앱의 값 거부). 그래서 국내 섹터맵은

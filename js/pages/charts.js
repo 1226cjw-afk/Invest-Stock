@@ -3,6 +3,8 @@
   const C = window.AppConfig;
 
   function renderChart(sym) {
+    /* 국내 지수는 위젯이 막으므로 네이버 이미지 차트 (core.js krxChart 참조) */
+    if (sym.startsWith('KRX:')) { App.krxChart('w-chart', sym); return; }
     App.tv('w-chart', 'advanced-chart', {
       autosize: true, symbol: sym, interval: 'D',
       timezone: 'Asia/Seoul', theme: 'dark', style: '1', locale: 'kr',

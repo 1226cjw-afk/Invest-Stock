@@ -9,7 +9,9 @@
   자체 시세박스 `App.renderQuoteBox`(내부 `App.fetchQuote`) · 여러 종목 일괄 조회 `App.fetchQuotes`
   (시장별 병렬 — 대시보드 요약 카드가 사용) · 심볼→스캐너 시장 판별 `App.scanRegion`
   (KRX=korea, FX_IDC/FOREXCOM=forex, BINANCE=crypto, 나머지=america) ·
-  주기 셀렉트 `App.intervalSelect` · 포맷터 `App.fmt`.
+  주기 셀렉트 `App.intervalSelect` · 포맷터 `App.fmt` ·
+  자체 기술적 분석 게이지 `App.taWidget(id,sym,주기)`(스캐너 `Recommend.*`, 위젯 아님 — Promise로 `{desc,iv}` 반환) ·
+  국내 차트 `App.krxChart(id,sym)`(네이버 금융 차트 이미지 — KRX는 TV 위젯이 막음).
 - `js/breadth.js` — 헤더 티커 아래 **시장 폭 스트립**(전역, 탭 아님). 지수 구성종목을 통째로 받아
   상승/보합/하락 종목 수·거래대금·상한가를 직접 집계하고 시장 온도(상승÷(상승+하락)×100)를 낸다.
   세그먼트를 누르면 `AppHot.goto(시장, 지수)`로 핫 종목 탭이 그 지수로 열림. 설정은 `AppConfig.BREADTH`.
@@ -77,6 +79,16 @@
 - `range:[0,1]`로 보내면 `totalCount`에 조건 충족 종목 수가 온다(시장 폭 카운트에 사용 가능).
   다만 방향별로 요청이 나뉘므로, 구성종목을 통째로 받아 세는 편이 싸다 — `js/breadth.js` 참조
   (코스피 808종목 42KB · 코스닥 1727종목 89KB · SPX 28KB · NDX 6KB, 각 ~450ms).
+- **TradingView 무료 위젯은 KRX 전부 + 일부 TVC 심볼을 막는다 (2026-10-08 확인)** — 위젯 안에
+  "TradingView에서만 사용할 수 있습니다"가 뜬다. 콘솔 에러도 네트워크 실패도 없어서 **스크린샷으로만 보인다**.
+  막힘: `KRX:*`(종목·지수 전부) · `TVC:VIX/US10Y/DXY/RUT/NI225/HSI/UKX/SPX` · `SP:SPX` · `CBOE:*`.
+  대체 확인: `CAPITALCOM:VIX`·`FRED:DGS10`·`CAPITALCOM:DXY`·`FOREXCOM:US2000/JP225/HKXHKD/UKXGBP`.
+  위젯에 심볼을 추가할 땐 `test/`에 single-quote 위젯 격자 페이지를 만들어 스크린샷으로 먼저 확인할 것.
+  스캐너 API는 이 제한과 무관(현황 요약의 `TVC:VIX`·`KRX:*`는 정상).
+- **국내 일봉 이력은 브라우저에서 못 받는다** — 야후(`query1.finance.yahoo.com`)·네이버 API 모두
+  CORS 헤더가 없다(2026-10-08 확인). 그래서 `<img>`로 받는 네이버 차트 이미지
+  `ssl.pstatic.net/imgfinance/chart/mobile/{day|candle/day|candle/week|candle/month}/{코드}_end.png`를 쓴다
+  (종목은 6자리 코드, 지수는 `KOSPI`·`KOSDAQ`·`KPI200`). 진짜 캔들 데이터가 필요하면 Workers 프록시가 필요.
 - **TradingView embed 히트맵은 한국 데이터셋(KOSPI 등) 미지원** — 조용히 SPX500으로 폴백.
   국내 섹터맵은 자체 트리맵(`js/pages/sectors.js`) 유지, 위젯으로 되돌리지 말 것.
 - 브라우저용 API 검증 시 curl POST 성공만 믿지 말 것 — preflight(OPTIONS +

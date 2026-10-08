@@ -48,8 +48,11 @@
     /* 최신 AI 리포트 한 줄 */
     const foot = document.getElementById('sum-foot');
     const latest = (window.AppReports || [])[0];
+    /* 경과일 — 오래된 리포트를 "오늘 것"으로 착각하지 않도록 */
+    const days = latest ? Math.floor((Date.now() - new Date(latest.date.slice(0, 10) + 'T00:00:00+09:00')) / 864e5) : 0;
+    const age = days >= 1 ? ` <span class="sf-age">(${days}일 전)</span>` : '';
     foot.innerHTML = latest
-      ? `<b>최신 리포트</b> ${App.esc(latest.date)} · ${App.esc(latest.target)}` +
+      ? `<b>최신 리포트</b> ${App.esc(latest.date)}${age} · ${App.esc(latest.target)}` +
         `${latest.direction ? ' ' + App.esc(latest.direction) : ''} <span class="sf-go">전문 보기 →</span>`
       : '<b>최신 리포트</b> 아직 없음';
     foot.onclick = latest ? () => App.show('reports') : null;

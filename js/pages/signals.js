@@ -28,7 +28,7 @@
     grid.innerHTML = '';
     getWatch().forEach(sym => {
       const cell = document.createElement('div');
-      cell.className = 'watch-cell panel h-ta';
+      cell.className = 'watch-cell panel';
       const x = document.createElement('button');
       x.className = 'watch-x'; x.textContent = '✕'; x.title = sym + ' 제거';
       x.onclick = () => { setWatch(getWatch().filter(s => s !== sym)); renderWatch(); };
@@ -37,6 +37,10 @@
       const bd = document.createElement('div');
       bd.className = 'panel-bd';
       bd.id = 'ta-' + sym.replace(/[^A-Za-z0-9]/g, '_');
+      /* 평가를 받아오면 제목을 "종목명 + 심볼"로 (코드만으론 국내 종목을 알아보기 어렵다) */
+      const named = t => {
+        if (t && t.desc) hd.querySelector('h2').innerHTML = `${App.esc(t.desc)} <small class="wc-sym">${App.esc(sym)}</small>`;
+      };
       const sel = App.intervalSelect(watchIv[sym] || '1D', v => {
         watchIv[sym] = v;
         App.taWidget(bd.id, sym, v);
@@ -45,7 +49,7 @@
       hd.appendChild(sel);
       cell.append(x, hd, bd);
       grid.appendChild(cell);
-      App.taWidget(bd.id, sym, watchIv[sym] || '1D');
+      App.taWidget(bd.id, sym, watchIv[sym] || '1D').then(named);
     });
   }
 

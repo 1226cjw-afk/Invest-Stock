@@ -230,13 +230,156 @@ window.App = (function () {
     return sel;
   }
 
-  /* 기술적 분석 게이지 (내장 주기 탭 off — 주기는 intervalSelect로 제어) */
-  function taWidget(elId, sym, interval) {
-    tv(elId, 'technical-analysis', {
-      colorTheme: 'dark', locale: 'kr', isTransparent: true,
-      interval: interval || '1D', width: '100%', height: '100%', symbol: sym,
-      showIntervalTabs: false, displayMode: 'single',
+  /* ── 기술적 분석 게이지 (자체 렌더) ─────────────────
+     TradingView technical-analysis 위젯 대체 (2026-10-08): 위젯은 판정을 '셀/바이/뉴트럴'로
+     음역해 보여주고, 관심목록 카드마다 iframe이 하나씩 붙어 무거웠다.
+     스캐너의 Recommend.* 컬럼(-1~+1)이 위젯과 같은 평가값이며, 한 번의 요청으로 전 주기를 받는다.
+     주기 접미사: 일봉은 없음, 나머지는 '|60' '|1W' 식 */
+  const TA_SUFFIX = {
+    '1m': '|1', '5m': '|5', '15m': '|15', '30m': '|30', '1h': '|60', '2h': '|120',
+    '4h': '|240', '1D': '', '1W': '|1W', '1M': '|1M',
+  };
+  /* TradingView 기준 구간: ≥0.5 적극매수 · ≥0.1 매수 · (-0.1,0.1) 중립 · ≤-0.1 매도 · ≤-0.5 적극매도 */
+  function taLevel(v) {
+    if (v == null) return { label: '—', cls: 'na' };
+    if (v >= 0.5) return { label: '적극 매수', cls: 'sbuy' };
+    if (v >= 0.1) return { label: '매수', cls: 'buy' };
+    if (v > -0.1) return { label: '중립', cls: 'neu' };
+    if (v > -0.5) return { label: '매도', cls: 'sell' };
+    return { label: '적극 매도', cls: 'ssell' };
+  }
+
+  const taCache = new Map();   // sym → {at, val} · 60초
+  async function fetchTA(sym) {
+    const hit = taCache.get(sym);
+    if (hit && Date.now() - hit.at < 60000) return hit.val;
+    const ivs = Object.keys(TA_SUFFIX);
+    const columns = ['description'];
+    ivs.forEach(iv => {
+      const s = TA_SUFFIX[iv];
+      columns.push('Recommend.All' + s, 'Recommend.MA' + s, 'Recommend.Other' + s);
     });
+    /* ⚠ content-type 헤더 금지 — 단순 요청이어야 preflight 없이 통과 */
+    const r = await fetch(`https://scanner.tradingview.com/${scanRegion(sym)}/scan`, {
+      method: 'POST',
+      body: JSON.stringify({ options: { lang: 'ko' }, symbols: { tickers: [sym] }, columns }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = (await r.json()).data;
+    if (!d || !d.length) throw new Error('평가 정보 없음');
+    const row = d[0].d;
+    const val = { desc: row[0], iv: {} };
+    ivs.forEach((iv, i) => {
+      val.iv[iv] = { all: row[1 + i * 3], ma: row[2 + i * 3], osc: row[3 + i * 3] };
+    });
+    taCache.set(sym, { at: Date.now(), val });
+    return val;
+  }
+
+  /* 반원 게이지 SVG: 왼쪽 끝 -1(적극매도) ~ 오른쪽 끝 +1(적극매수) */
+  function gaugeSvg(v) {
+    const cx = 100, cy = 96, r = 78;
+    const pt = (val, rad) => {
+      const a = Math.PI * (1 - (val + 1) / 2);
+      return [cx + rad * Math.cos(a), cy - rad * Math.sin(a)];
+    };
+    const seg = (a, b, cls) => {
+      const [x1, y1] = pt(a, r), [x2, y2] = pt(b, r);
+      return `<path class="tg-${cls}" d="M${x1.toFixed(1)} ${y1.toFixed(1)} A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
+    };
+    const gap = 0.025;   // 구간 사이 틈
+    const arcs = [[-1, -0.5, 'ssell'], [-0.5, -0.1, 'sell'], [-0.1, 0.1, 'neu'], [0.1, 0.5, 'buy'], [0.5, 1, 'sbuy']]
+      .map(([a, b, c]) => seg(a + gap, b - gap, c)).join('');
+    const nv = Math.max(-1, Math.min(1, v ?? 0));
+    const [nx, ny] = pt(nv, r - 16);
+    return `<svg class="ta-gauge" viewBox="0 0 200 104" aria-hidden="true">${arcs}` +
+      (v == null ? '' : `<line class="tg-needle" x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}"/>`) +
+      `<circle class="tg-hub" cx="${cx}" cy="${cy}" r="5"/></svg>`;
+  }
+
+  const TA_SHORT = { '1m': '1분', '5m': '5분', '15m': '15분', '30m': '30분', '1h': '1시간',
+                     '2h': '2시간', '4h': '4시간', '1D': '일', '1W': '주', '1M': '월' };
+
+  /* elId에 게이지를 그리고 {desc, iv} 를 돌려준다 (실패 시 null).
+     같은 칸에 연달아 호출되면 마지막 호출 결과만 반영 */
+  async function taWidget(elId, sym, interval) {
+    const host = document.getElementById(elId);
+    if (!host) return null;
+    interval = interval || '1D';
+    const token = String(Math.random());
+    host.dataset.taReq = token;
+    if (!host.querySelector('.ta')) host.innerHTML = '<div class="qb-empty">기술적 평가 불러오는 중…</div>';
+    let t;
+    try { t = await fetchTA(sym); }
+    catch (e) {
+      if (host.dataset.taReq === token) {
+        host.innerHTML = `<div class="qb-empty">기술적 평가를 불러오지 못했습니다 (${esc(e.message)})</div>`;
+      }
+      return null;
+    }
+    if (host.dataset.taReq !== token) return t;
+    const cur = t.iv[interval] || {};
+    const L = taLevel(cur.all), Lo = taLevel(cur.osc), Lm = taLevel(cur.ma);
+    const sgn = v => v == null ? '' : (v > 0 ? '+' : '') + v.toFixed(2);
+    const mtf = Object.keys(TA_SUFFIX).map(iv => {
+      const lv = taLevel(t.iv[iv].all);
+      return `<span class="ta-pill ${lv.cls}${iv === interval ? ' cur' : ''}" title="${TA_SHORT[iv]} · ${lv.label} ${sgn(t.iv[iv].all)}">` +
+        `<i>${TA_SHORT[iv]}</i><b>${lv.label}</b></span>`;
+    }).join('');
+    host.innerHTML = `
+      <div class="ta">
+        <div class="ta-main">
+          ${gaugeSvg(cur.all)}
+          <div class="ta-verdict ${L.cls}">${L.label}<small>${sgn(cur.all)}</small></div>
+        </div>
+        <div class="ta-sub">
+          <span>오실레이터 <b class="${Lo.cls}">${Lo.label}</b></span>
+          <span>이동평균 <b class="${Lm.cls}">${Lm.label}</b></span>
+        </div>
+        <div class="ta-mtf">${mtf}</div>
+      </div>`;
+    return t;
+  }
+
+  /* ── 국내 차트 (네이버 금융 차트 이미지) ──────────────
+     TradingView 무료 위젯은 KRX 심볼을 "TradingView에서만 제공되는 심볼"로 막는다
+     (2026-10-08 확인 — advanced-chart · single-quote · ticker-tape 모두).
+     브라우저에서 직접 부를 수 있는 국내 일봉 API도 없어서(야후·네이버 API 모두 CORS 헤더 없음)
+     <img>로 받는 네이버 모바일 차트 이미지로 대체. 이미지는 CORS 대상이 아니다.
+     URL: ssl.pstatic.net/imgfinance/chart/mobile/<기간>/<코드>_end.png (종목·지수 공통 658×408) */
+  const NAVER_INDEX = { KOSPI: 'KOSPI', KOSDAQ: 'KOSDAQ', KOSPI200: 'KPI200' };
+  const KRX_PERIODS = [['day', '당일'], ['candle/day', '일봉'], ['candle/week', '주봉'], ['candle/month', '월봉']];
+  function naverCode(sym) {
+    const t = sym.replace(/^KRX:/, '');
+    if (NAVER_INDEX[t]) return { code: NAVER_INDEX[t], index: true };
+    if (/^[0-9A-Z]{6}$/.test(t)) return { code: t, index: false };
+    return null;
+  }
+  function krxChart(elId, sym, period) {
+    const host = document.getElementById(elId);
+    if (!host) return;
+    const nc = naverCode(sym);
+    if (!nc) {
+      host.innerHTML = `<div class="qb-empty">${esc(sym)} — 이 국내 심볼은 차트를 지원하지 않습니다</div>`;
+      return;
+    }
+    period = period || 'candle/day';
+    const page = `https://m.stock.naver.com/domestic/${nc.index ? 'index' : 'stock'}/${nc.code}/total`;
+    const stamp = Math.floor(Date.now() / 60000);   // 1분 단위 캐시 무효화
+    host.innerHTML = `
+      <div class="kc">
+        <div class="kc-bar">
+          ${KRX_PERIODS.map(([p, l]) => `<button class="kc-p${p === period ? ' active' : ''}" data-p="${p}">${l}</button>`).join('')}
+          <a class="kc-src" href="${page}" target="_blank" rel="noopener">차트: 네이버 금융 ↗</a>
+        </div>
+        <div class="kc-img">
+          <img src="https://ssl.pstatic.net/imgfinance/chart/mobile/${period}/${nc.code}_end.png?t=${stamp}" alt="${esc(sym)} 차트">
+        </div>
+      </div>`;
+    host.querySelectorAll('.kc-p').forEach(b => { b.onclick = () => krxChart(elId, sym, b.dataset.p); });
+    host.querySelector('img').onerror = () => {
+      host.querySelector('.kc-img').innerHTML = '<div class="qb-empty">차트 이미지를 불러오지 못했습니다</div>';
+    };
   }
 
   /* ── 종목 상세 팝업 (공용: 핫 종목·섹터맵 등에서 사용) ── */
@@ -294,7 +437,9 @@ window.App = (function () {
         document.getElementById('sm-title').textContent = `${q.desc} · ${sym}`;
       }
     });
-    tv('sm-chart', 'advanced-chart', {
+    /* 국내 종목은 위젯이 차트를 막으므로 네이버 이미지 차트 (krxChart 주석 참조) */
+    if (sym.startsWith('KRX:')) krxChart('sm-chart', sym);
+    else tv('sm-chart', 'advanced-chart', {
       autosize: true, symbol: sym, interval: 'D', timezone: 'Asia/Seoul',
       theme: 'dark', style: '1', locale: 'kr', backgroundColor: '#0d1117',
       gridColor: 'rgba(42,52,65,0.5)', withdateranges: true,
@@ -405,5 +550,5 @@ window.App = (function () {
 
   return { registerPage, show, boot, tv, DARK, esc, mdLite, fmt, store,
            openSymbolModal, fetchQuote, fetchQuotes, scanRegion, fxUsdKrw,
-           renderQuoteBox, intervalSelect, taWidget };
+           renderQuoteBox, intervalSelect, taWidget, krxChart };
 })();

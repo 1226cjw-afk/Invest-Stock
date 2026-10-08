@@ -11,15 +11,23 @@ window.AppConfig = {
     watchlist: 'invst_watchlist',
   },
 
-  /* 상단 티커 테이프 */
+  /* ⚠ TradingView 무료 위젯(티커 테이프·오버뷰·고급 차트)에서 막히는 심볼 (2026-10-08 실측)
+     → 위젯에 "TradingView에서만 사용할 수 있습니다"가 뜬다. 위젯용 목록에 넣지 말 것:
+       KRX:* 전부(코스피·코스닥·코스피200·개별종목) · TVC:VIX · TVC:US10Y · TVC:DXY ·
+       TVC:RUT · TVC:NI225 · TVC:HSI · TVC:UKX · TVC:SPX · SP:SPX · CBOE:*
+     대체로 확인된 것: CAPITALCOM:VIX · FRED:DGS10 · CAPITALCOM:DXY · FOREXCOM:US2000 ·
+       FOREXCOM:JP225 · FOREXCOM:HKXHKD · FOREXCOM:UKXGBP (XETR:DAX·TVC:USOIL·TVC:GOLD는 정상)
+     국내 차트는 core.js의 App.krxChart(네이버 이미지)로 그린다.
+     스캐너 API(현황 요약·시장 폭 등)는 이 제한과 무관 — TVC:VIX·KRX:* 그대로 조회됨 */
+
+  /* 상단 티커 테이프 — 코스피·코스닥은 바로 아래 시장 폭 스트립이 보여준다 */
   TAPE_SYMBOLS: [
     { proName: 'FOREXCOM:SPXUSD', title: 'S&P 500' },
     { proName: 'FOREXCOM:NSXUSD', title: '나스닥 100' },
     { proName: 'FOREXCOM:DJI',    title: '다우존스' },
-    { proName: 'KRX:KOSPI',       title: '코스피' },
-    { proName: 'KRX:KOSDAQ',      title: '코스닥' },
     { proName: 'FX_IDC:USDKRW',   title: '달러/원' },
-    { proName: 'TVC:US10Y',       title: '미 10년물' },
+    { proName: 'FRED:DGS10',      title: '미 10년물(일간)' },
+    { proName: 'CAPITALCOM:DXY',  title: '달러 인덱스' },
     { proName: 'TVC:USOIL',       title: 'WTI 원유' },
     { proName: 'TVC:GOLD',        title: '금' },
     { proName: 'BINANCE:BTCUSDT', title: '비트코인' },
@@ -64,30 +72,29 @@ window.AppConfig = {
     temp: [[75, '과열', 'hot'], [60, '강세', 'warm'], [40, '중립', 'mid'], [25, '약세', 'cool'], [0, '공포', 'cold']],
   },
 
-  /* 대시보드 마켓 오버뷰 탭 */
+  /* 대시보드 마켓 오버뷰 탭 (위젯 — 막히는 심볼은 위 ⚠ 목록 참조)
+     국내 지수는 위젯에서 막혀 '한국' 탭을 없앴다 — 바로 위 현황 요약 카드가 대신한다 */
   OVERVIEW_TABS: [
     { title: '미국', symbols: [
       { s: 'FOREXCOM:SPXUSD', d: 'S&P 500' },
       { s: 'FOREXCOM:NSXUSD', d: '나스닥 100' },
       { s: 'FOREXCOM:DJI',    d: '다우존스' },
-      { s: 'TVC:RUT',         d: '러셀 2000' },
-      { s: 'TVC:VIX',         d: 'VIX 변동성' },
-      { s: 'TVC:US10Y',       d: '미 10년물 금리' },
+      { s: 'FOREXCOM:US2000', d: '러셀 2000' },
+      { s: 'CAPITALCOM:VIX',  d: 'VIX 변동성(선물 CFD)' },
+      { s: 'FRED:DGS10',      d: '미 10년물 금리(일간)' },
     ]},
-    { title: '한국', symbols: [
-      { s: 'KRX:KOSPI',     d: '코스피' },
-      { s: 'KRX:KOSDAQ',    d: '코스닥' },
-      { s: 'KRX:KOSPI200',  d: '코스피 200' },
-      { s: 'FX_IDC:USDKRW', d: '달러/원 환율' },
-    ]},
-    { title: '글로벌·원자재', symbols: [
-      { s: 'TVC:NI225',       d: '닛케이 225' },
-      { s: 'TVC:HSI',         d: '항셍' },
-      { s: 'XETR:DAX',        d: '독일 DAX' },
-      { s: 'TVC:UKX',         d: '영국 FTSE 100' },
+    { title: '환율·원자재', symbols: [
+      { s: 'FX_IDC:USDKRW',   d: '달러/원 환율' },
+      { s: 'CAPITALCOM:DXY',  d: '달러 인덱스' },
       { s: 'TVC:USOIL',       d: 'WTI 원유' },
       { s: 'TVC:GOLD',        d: '금' },
       { s: 'BINANCE:BTCUSDT', d: '비트코인' },
+    ]},
+    { title: '아시아·유럽', symbols: [
+      { s: 'FOREXCOM:JP225',  d: '닛케이 225' },
+      { s: 'FOREXCOM:HKXHKD', d: '항셍' },
+      { s: 'XETR:DAX',        d: '독일 DAX' },
+      { s: 'FOREXCOM:UKXGBP', d: '영국 FTSE 100' },
     ]},
   ],
 
@@ -185,14 +192,15 @@ window.AppConfig = {
     },
   },
 
-  /* 지수 차트 사이드바 (그룹명 → [심볼, 표시명]) */
+  /* 지수 차트 사이드바 (그룹명 → [심볼, 표시명])
+     KRX:* 는 위젯 대신 네이버 이미지 차트로 그려진다 (charts.js) */
   CHART_GROUPS: [
     ['미국 지수', [
       ['FOREXCOM:SPXUSD', 'S&P 500'],
       ['FOREXCOM:NSXUSD', '나스닥 100'],
       ['FOREXCOM:DJI',    '다우존스'],
-      ['TVC:RUT',         '러셀 2000'],
-      ['TVC:VIX',         'VIX 변동성지수'],
+      ['FOREXCOM:US2000', '러셀 2000'],
+      ['CAPITALCOM:VIX',  'VIX 변동성(선물 CFD)'],
     ]],
     ['한국 지수', [
       ['KRX:KOSPI',    '코스피'],
@@ -200,15 +208,15 @@ window.AppConfig = {
       ['KRX:KOSPI200', '코스피 200'],
     ]],
     ['아시아·유럽', [
-      ['TVC:NI225', '닛케이 225'],
-      ['TVC:HSI',   '항셍'],
-      ['XETR:DAX',  '독일 DAX'],
-      ['TVC:UKX',   '영국 FTSE 100'],
+      ['FOREXCOM:JP225',  '닛케이 225'],
+      ['FOREXCOM:HKXHKD', '항셍'],
+      ['XETR:DAX',        '독일 DAX'],
+      ['FOREXCOM:UKXGBP', '영국 FTSE 100'],
     ]],
     ['금리·환율·원자재', [
-      ['TVC:US10Y',       '미 국채 10년물'],
+      ['FRED:DGS10',      '미 국채 10년물(일간)'],
       ['FX_IDC:USDKRW',   '달러/원'],
-      ['TVC:DXY',         '달러 인덱스'],
+      ['CAPITALCOM:DXY',  '달러 인덱스'],
       ['TVC:USOIL',       'WTI 원유'],
       ['TVC:GOLD',        '금'],
       ['BINANCE:BTCUSDT', '비트코인'],
@@ -226,7 +234,7 @@ window.AppConfig = {
   /* Claude API 설정 — 웹 서비스로 확장 시 endpoint만 자체 프록시 서버로 교체 */
   AI: {
     endpoint: 'https://api.anthropic.com/v1/messages',
-    model: 'claude-opus-4-8',
+    model: 'claude-opus-5-5',
     maxTokens: 16000,
     maxWebSearches: 8,
     maxContinuations: 4,   // pause_turn(서버측 검색 루프 일시정지) 이어받기 횟수
